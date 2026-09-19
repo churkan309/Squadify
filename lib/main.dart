@@ -1,15 +1,26 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 
+import 'firebase_options.dart';
 import 'pages/login_page.dart';
 import 'pages/main_navigation_page.dart';
+import 'pages/register_page.dart';
+import 'providers/auth_provider.dart';
+import 'providers/community_provider.dart';
 import 'providers/party_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => PartyProvider(),
+    MultiProvider(
+      providers: [
+        Provider<PartyProvider>(create: (_) => PartyProvider()),
+        Provider<CommunityProvider>(create: (_) => CommunityProvider()),
+        ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -35,45 +46,30 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => const MainNavigationPage(),
         '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
       },
       home: const StartupPage(),
     );
   }
 }
 
-// ตรวจสอบสถานะการล็อกอินตอนเปิดแอพ แล้วพาไปหน้าที่ถูกต้อง
-class StartupPage extends StatefulWidget {
+// ฟัง authStateChanges() ของ Firebase แทนการอ่าน secure storage แบบเดิม
+class StartupPage extends StatelessWidget {
   const StartupPage({super.key});
 
   @override
-  State<StartupPage> createState() => _StartupPageState();
-}
-
-class _StartupPageState extends State<StartupPage> {
-  bool? _isLoggedIn;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    const secureStorage = FlutterSecureStorage();
-    final isLoggedIn = await secureStorage.read(key: 'isLoggedIn') == 'true';
-    if (!mounted) return;
-    setState(() {
-      _isLoggedIn = isLoggedIn;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_isLoggedIn == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    return _isLoggedIn! ? const MainNavigationPage() : const LoginPage();
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = snapshot.data;
+        return user != null ? const MainNavigationPage() : const LoginPage();
+      },
+    );
   }
 }

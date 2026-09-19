@@ -4,29 +4,35 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../services/auth_service.dart';
 import '../validation/form_validator.dart';
 import 'main_navigation_page.dart';
-import 'register_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+// หน้าสมัครสมาชิก: username (เก็บเป็น displayName), email, password จริงผ่าน Firebase Auth
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isLoading = false;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.signIn(_emailController.text, _passwordController.text);
+      await _authService.signUp(
+        _emailController.text,
+        _passwordController.text,
+        _usernameController.text,
+      );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        (route) => false,
       );
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -38,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -46,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('Squadify')),
+      appBar: AppBar(centerTitle: true, title: const Text('สมัครสมาชิก')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 300.0),
@@ -59,8 +66,20 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Login',
+                      'Register',
                       style: TextStyle(color: Color.fromARGB(255, 238, 234, 234), fontSize: 30),
+                    ),
+                    const SizedBox(height: 20.0),
+                    FormBuilderTextField(
+                      name: 'username',
+                      style: const TextStyle(color: Colors.white),
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(),
+                        labelStyle: TextStyle(color: Colors.white),
+                      ),
+                      validator: FormValidator.validateUsername,
                     ),
                     const SizedBox(height: 20.0),
                     FormBuilderTextField(
@@ -94,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                           ? null
                           : () {
                               if (_formKey.currentState?.saveAndValidate() ?? false) {
-                                _login();
+                                _register();
                               }
                             },
                       child: _isLoading
@@ -104,19 +123,15 @@ class _LoginPageState extends State<LoginPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text(
-                              'Login',
+                              'สมัครสมาชิก',
                               style: TextStyle(color: Color.fromARGB(255, 13, 13, 13)),
                             ),
                     ),
                     const SizedBox(height: 12.0),
                     TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const RegisterPage()),
-                        );
-                      },
+                      onPressed: () => Navigator.of(context).pop(),
                       child: const Text(
-                        'ยังไม่มีบัญชี? สมัครสมาชิก',
+                        'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ',
                         style: TextStyle(color: Colors.white70),
                       ),
                     ),

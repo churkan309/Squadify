@@ -9,7 +9,9 @@ import 'settings_page.dart';
 import 'squad_detail_page.dart';
 
 // หน้าหลักของแอพ: คุม AppBar, bottom nav bar 4 ปุ่ม และปุ่ม + สร้าง Squad
-// _selectedIndex: 0 = หน้าแรก, 1 = Squad ของฉัน, 2 = ชุมชน, 3 = ตั้งค่า
+// _selectedIndex: 0 = หน้าแรก, 1 = Squad detail, 2 = ชุมชน, 3 = ตั้งค่า
+// _selectedPartyId: squad ที่กำลังดูอยู่ในแท็บ Squad detail
+//   (null = ยังไม่เลือก -> fallback ไปดู squad ของตัวเอง ดู SquadDetailPageResolver)
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
 
@@ -19,20 +21,32 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
+  String? _selectedPartyId;
   final GlobalKey _bellKey = GlobalKey(); // ใช้หาตำแหน่งกระดิ่งบนจอ เพื่อเด้ง popup ออกจากจุดนั้น
+
+  // แตะการ์ด squad (ของตัวเองหรือของคนอื่น) แล้วพาไปแท็บ detail พร้อม partyId
+  void _onViewSquad(String partyId) {
+    setState(() {
+      _selectedPartyId = partyId;
+      _selectedIndex = 1;
+    });
+  }
 
   Widget _getSelectedPage() {
     switch (_selectedIndex) {
       case 0:
-        return HomeTabPage(onViewSquad: () => setState(() => _selectedIndex = 1));
+        return HomeTabPage(onViewSquad: _onViewSquad);
       case 1:
-        return const SquadDetailPage();
+        return SquadDetailPageResolver(
+          selectedPartyId: _selectedPartyId,
+          onViewSquad: _onViewSquad,
+        );
       case 2:
         return const CommunityPage();
       case 3:
         return const SettingsPage();
       default:
-        return HomeTabPage(onViewSquad: () => setState(() => _selectedIndex = 1));
+        return HomeTabPage(onViewSquad: _onViewSquad);
     }
   }
 
@@ -59,13 +73,19 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         ),
       ],
     );
+    // ทำกระดิ่งแจ้งเตือนจริง: สร้าง Firestore collection 'notifications'
+    // (แนะนำ: subcollection users/{uid}/notifications) แล้วฟังด้วย
+    // StreamBuilder ตรงนี้แทน PopupMenuItem คงที่ด้านบน — trigger เพิ่ม doc ใหม่
+    // ตอน join/leave/remove เกิดขึ้นกับ squad ของ uid นั้นๆ
   }
 
-  // กดปุ่ม + : ถ้ามี Squad อยู่แล้ว เตือนให้ลบก่อน / ถ้ายังไม่มี เปิดฟอร์มสร้าง Squad
-  void _onCreateSquadPressed() {
+  // กดปุ่ม + : เช็ก hasHostedParty จาก Firestore (ไม่ใช่ provider ใน memory)
+  Future<void> _onCreateSquadPressed() async {
     final partyProvider = context.read<PartyProvider>();
+    final hasParty = await partyProvider.hasHostedParty();
+    if (!mounted) return;
 
-    if (partyProvider.hasParty) {
+    if (hasParty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -89,7 +109,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     showCreatePartyDialog(
       context,
-      onCreated: () => setState(() => _selectedIndex = 1), // สร้างเสร็จ พาไปหน้า Squad ของฉันทันที
+      onCreated: (partyId) => _onViewSquad(partyId), // สร้างเสร็จ พาไปหน้า detail ทันที
     );
   }
 
@@ -128,31 +148,36 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         color: const Color.fromARGB(248, 25, 53, 40),
         child: SizedBox(
           height: 20,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.home),
-                color: _selectedIndex == 0 ? Colors.white : Colors.white54,
-                onPressed: () => setState(() => _selectedIndex = 0),
-              ),
-              IconButton(
-                icon: const Icon(Icons.group),
-                color: _selectedIndex == 1 ? Colors.white : Colors.white54,
-                onPressed: () => setState(() => _selectedIndex = 1),
-              ),
-              const SizedBox(width: 48), // เว้นที่ให้ FAB ตรงกลาง
-              IconButton(
-                icon: const Icon(Icons.forum),
-                color: _selectedIndex == 2 ? Colors.white : Colors.white54,
-                onPressed: () => setState(() => _selectedIndex = 2),
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                color: _selectedIndex == 3 ? Colors.white : Colors.white54,
-                onPressed: () => setState(() => _selectedIndex = 3),
-              ),
-            ],
+          child: Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                IconButton(
+                  icon: const Icon(Icons.home),
+                  color: _selectedIndex == 0 ? Colors.white : Colors.white54,
+                  onPressed: () => setState(() => _selectedIndex = 0),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.group),
+                  color: _selectedIndex == 1 ? Colors.white : Colors.white54,
+                  onPressed: () => setState(() {
+                    _selectedPartyId = null; // แตะแท็บตรงๆ กลับไปดู squad ของตัวเอง
+                    _selectedIndex = 1;
+                  }),
+                ),
+                const SizedBox(width: 48), // เว้นที่ให้ FAB ตรงกลาง
+                IconButton(
+                  icon: const Icon(Icons.forum),
+                  color: _selectedIndex == 2 ? Colors.white : Colors.white54,
+                  onPressed: () => setState(() => _selectedIndex = 2),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  color: _selectedIndex == 3 ? Colors.white : Colors.white54,
+                  onPressed: () => setState(() => _selectedIndex = 3),
+                ),
+              ],
+            ),
           ),
         ),
       ),

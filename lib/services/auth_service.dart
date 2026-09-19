@@ -1,31 +1,86 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// จัดการเรื่อง login/logout และเก็บสถานะการล็อกอินแบบปลอดภัย (secure storage)
+// error ที่โยนออกมาจาก AuthService พร้อมข้อความภาษาไทยให้ผู้ใช้อ่านเข้าใจ
+class AuthException implements Exception {
+  final String message;
+  AuthException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+// จัดการ login/register/logout ผ่าน Firebase Auth จริง
+// + สร้าง/อ่านโปรไฟล์ผู้ใช้ที่ users/{uid} ใน Firestore
 class AuthService {
-  final FlutterSecureStorage _secureStorage;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
-  AuthService({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
-  // TODO: ตอนนี้ยัง hardcode username/password ไว้ก่อน ค่อยเปลี่ยนเป็นเรียก API จริงทีหลัง
-  static const String _correctUsername = 'admin';
-  static const String _correctPassword = '123456';
+  User? get currentUser => _auth.currentUser;
 
-  Future<bool> login(String username, String password) async {
-    final isValid = username == _correctUsername && password == _correctPassword;
+  Stream<User?> authStateChanges() => _auth.authStateChanges();
 
-    if (isValid) {
-      await _secureStorage.write(key: 'isLoggedIn', value: 'true');
+  Future<void> signIn(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapErrorMessage(e.code));
     }
-    return isValid;
   }
 
-  Future<bool> checkLoginStatus() async {
-    final value = await _secureStorage.read(key: 'isLoggedIn');
-    return value == 'true';
+  Future<void> signUp(String email, String password, String username) async {
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final uid = credential.user!.uid;
+      await credential.user!.updateDisplayName(username.trim());
+      await _firestore.collection('users').doc(uid).set({
+        'uid': uid,
+        'username': username.trim(),
+        'email': email.trim(),
+        'avatarUrl': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapErrorMessage(e.code));
+    }
   }
 
-  Future<void> logout() async {
-    await _secureStorage.delete(key: 'isLoggedIn');
+  Future<void> signOut() => _auth.signOut();
+
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.data();
+  }
+
+  // map รหัส error ของ FirebaseAuthException เป็นข้อความไทยที่ผู้ใช้อ่านเข้าใจ
+  String _mapErrorMessage(String code) {
+    switch (code) {
+      case 'invalid-email':
+        return 'อีเมลไม่ถูกต้อง';
+      case 'user-disabled':
+        return 'บัญชีนี้ถูกระงับการใช้งาน';
+      case 'user-not-found':
+        return 'ไม่พบบัญชีผู้ใช้นี้';
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      case 'email-already-in-use':
+        return 'อีเมลนี้ถูกใช้งานแล้ว';
+      case 'weak-password':
+        return 'รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัวอักษร)';
+      case 'network-request-failed':
+        return 'เชื่อมต่อเครือข่ายไม่ได้ ลองใหม่อีกครั้ง';
+      case 'too-many-requests':
+        return 'ลองผิดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';
+      default:
+        return 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+    }
   }
 }

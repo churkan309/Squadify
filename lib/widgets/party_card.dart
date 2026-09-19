@@ -55,7 +55,7 @@ class PartyCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '(${party.currentMembers}/${party.maxMembers}) คนใน Party',
+                        '(${party.memberCount}/${party.maxMembers}) คนใน Party',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.white70, fontSize: 11),
