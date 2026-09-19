@@ -1,0 +1,82 @@
+Squadify — คู่มือโครงสร้างโปรเจกต์
+=====================================
+
+ภาพรวม
+-------
+แอพหาสมาชิกเล่นเกมเป็นทีม (Squad) ผู้ใช้ login แล้วสร้าง Squad ได้ 1 กลุ่มต่อครั้ง
+ดูรายละเอียด Squad พร้อมเตะสมาชิกออกได้ และมีกระดานสนทนาของชุมชน
+
+โครงสร้างโฟลเดอร์ lib/
+-----------------------
+lib/
+├── main.dart                       จุดเริ่มต้นแอพ ตั้งค่า Theme และเช็คว่า login ค้างอยู่ไหมตอนเปิดแอพ (StartupPage)
+├── models/
+│   └── party_model.dart            โครงข้อมูล Party (Squad) และ SquadMember (สมาชิกในทีม)
+├── providers/
+│   └── party_provider.dart         เก็บสถานะ Squad ของผู้ใช้แบบ global ผ่าน package provider
+├── pages/
+│   ├── login_page.dart             หน้า login
+│   ├── main_navigation_page.dart   หน้าหลัก มี AppBar, bottom nav 4 ปุ่ม, ปุ่ม + สร้าง Squad, popup กระดิ่ง
+│   ├── home_tab_page.dart          แท็บ "หน้าแรก" โชว์การ์ด Squad ของผู้ใช้แบบย่อ (แตะแล้วไปหน้ารายละเอียด)
+│   ├── squad_detail_page.dart      แท็บ "Squad ของฉัน" รายละเอียดเต็ม + ปัดเตะสมาชิก + แก้ description
+│   ├── community_page.dart         แท็บ "ชุมชน" กระดานสนทนา โพสต์ + คอมเมนต์
+│   └── settings_page.dart          แท็บ "ตั้งค่า" (โครงเมนู ยังไม่ผูก logic จริงยกเว้น Logout)
+├── services/
+│   └── auth_service.dart           จัดการ login/logout ผ่าน flutter_secure_storage
+├── validation/
+│   └── form_validator.dart         ฟังก์ชันเช็คความถูกต้องของฟอร์มต่างๆ (username, password, game)
+└── widgets/
+    ├── create_party_dialog.dart    Dialog ฟอร์มสร้าง Squad (เลือกเกม, กรอก description)
+    ├── party_card.dart             การ์ดแสดง Squad แบบย่อ ใช้ในหน้าแรก
+    └── settings_tile.dart          แถวเมนูในหน้าตั้งค่า (icon + title + onTap)
+
+ตัวแปร/สถานะสำคัญที่ควรรู้
+----------------------------
+- PartyProvider._party (Party?)
+    Squad เดียวที่ผู้ใช้สร้างไว้ ถ้ายังไม่สร้างจะเป็น null
+    จำกัดไว้แค่ 1 Squad ต่อผู้ใช้ 1 คน — ดูฟังก์ชัน addParty() ที่จะคืนค่า false ถ้ามีอยู่แล้ว
+
+- Party.description (String, แก้ไขได้)
+    ช่องเดียวที่ผู้ใช้แก้ไขได้หลังสร้าง Squad ไปแล้ว
+    แก้ผ่านหน้า squad_detail_page.dart (กดไอคอนดินสอข้าง "Description")
+
+- Party.members (List<SquadMember>)
+    รายชื่อสมาชิกในทีม คนแรกคือผู้สร้าง Squad (isLeader = true, เตะตัวเองออกไม่ได้)
+    เตะสมาชิกคนอื่นออกได้โดยปัดการ์ดสมาชิกไปทางซ้ายในหน้า squad_detail_page.dart
+    ⚠ ต้องเพิ่ม dependency "flutter_slidable" ใน pubspec.yaml ก่อนถึงจะรันได้ (ดู TODO ข้อ 1)
+
+- MainNavigationPage._selectedIndex (int)
+    บอกว่ากำลังอยู่แท็บไหน: 0 = หน้าแรก, 1 = Squad ของฉัน, 2 = ชุมชน, 3 = ตั้งค่า
+
+- MainNavigationPage._onCreateSquadPressed()
+    ทำงานตอนกดปุ่ม +: ถ้ามี Squad อยู่แล้ว จะเด้ง dialog เตือนให้ลบก่อน
+    ถ้ายังไม่มี จะเปิดฟอร์มสร้าง Squad แล้วพาไปหน้า "Squad ของฉัน" ทันทีเมื่อสร้างเสร็จ
+
+- MainNavigationPage._showNotificationDropdown()
+    ใช้ _bellKey (GlobalKey) หาตำแหน่งไอคอนกระดิ่งบนจอ แล้วเปิด showMenu() ให้ popup
+    เด้งออกมาจากใต้กระดิ่งฝั่งขวาบน แทนที่จะเด้งกลางจอแบบ dialog ปกติ
+
+สิ่งที่ยังต้องทำต่อ (TODO)
+----------------------------
+1. เพิ่ม dependency ใน pubspec.yaml:
+       flutter_slidable: ^3.1.0
+   (ใช้ทำปัดเตะสมาชิกในหน้า squad_detail_page.dart — ถ้าไม่เพิ่ม โปรเจกต์จะ build ไม่ผ่าน)
+
+2. community_page.dart และ squad_detail_page.dart (สมาชิก/คอมเมนต์) เก็บข้อมูลไว้ใน
+   หน่วยความจำ (memory) เท่านั้น ปิดแอพแล้วข้อมูลหาย ยังไม่เชื่อมฐานข้อมูล/เซิร์ฟเวอร์จริง
+
+3. settings_page.dart ยังเป็นแค่โครง เมนู Profile / Notifications / Privacy / Help
+   ยังไม่มี logic จริง มีแค่ Logout ที่ทำงาน (พากลับไปหน้า login)
+
+4. popup กระดิ่งตอนนี้เป็นกล่องเปล่าๆ ("ยังไม่มีการแจ้งเตือนใหม่") ยังไม่มีข้อมูล
+   แจ้งเตือนจริงจากระบบ
+
+5. ไอคอนเกมใน assets/icons/ (lol.png, valorant.png, dota2.png, ow2.png, apex.png)
+   ต้องมีไฟล์จริงวางไว้และประกาศใน pubspec.yaml ไม่งั้นจะขึ้นไอคอนสำรอง
+   (Icons.videogame_asset) แทนอัตโนมัติ
+
+ไฟล์ที่ถูกลบ/รวมไปแล้ว
+------------------------
+- lib/pages2/chatpage.dart, lib/pages2/friendpage.dart, lib/services/gotopage.dart
+  (เป็นไฟล์โครงเปล่าๆ ที่ยังไม่ได้ใช้งาน — เนื้อหาถูกแทนที่ด้วย community_page.dart และ
+  squad_detail_page.dart ที่ทำงานได้จริงแล้ว)
