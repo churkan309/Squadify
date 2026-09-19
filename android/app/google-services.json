@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "478227061034",
+    "project_id": "flutterfirebaseeducated-9991e",
+    "storage_bucket": "flutterfirebaseeducated-9991e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478227061034:android:ceed8b314acfe4ebdba653",
+        "android_client_info": {
+          "package_name": "com.example.electricity_payment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuTQj8Ez05P9PdTLXXOz4ylCkz_0rpG-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478227061034:android:e54c8c4a21cc4966dba653",
+        "android_client_info": {
+          "package_name": "com.example.electricity_payment_auth"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuTQj8Ez05P9PdTLXXOz4ylCkz_0rpG-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478227061034:android:63fff3afd0650f20dba653",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuTQj8Ez05P9PdTLXXOz4ylCkz_0rpG-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
