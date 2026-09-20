@@ -53,7 +53,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('สมัครสมาชิก')),
+      appBar: AppBar(centerTitle: true, title: const Text('Squadify')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 300.0),
