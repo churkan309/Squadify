@@ -61,6 +61,42 @@ class PartyProvider {
         );
   }
 
+  // สร้าง Squad ใหม่: doc party + เพิ่ม host เข้า subcollection members ในคราวเดียว (batch)
+  // ผู้เรียกควรเช็ค hasHostedParty() ก่อนเรียกเมธอดนี้อยู่แล้ว (ดู main_navigation_page.dart)
+  // คืนค่า id ของ party ที่สร้างเสร็จ
+  Future<String> createParty({
+    required String game,
+    required String iconPath,
+    required int maxMembers,
+    required String description,
+    required String hostName,
+  }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('กรุณาล็อกอินก่อน');
+
+    final partyRef = _parties.doc();
+    final batch = _firestore.batch();
+    batch.set(partyRef, {
+      'game': game,
+      'iconPath': iconPath,
+      'maxMembers': maxMembers,
+      'description': description,
+      'hostId': uid,
+      'hostName': hostName,
+      'memberCount': 1,
+      'status': 'open',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(partyRef.collection('members').doc(uid), {
+      'name': hostName,
+      'avatarUrl': '',
+      'isLeader': true,
+      'joinedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+    return partyRef.id;
+  }
+
   // เช็กว่าผู้ใช้ปัจจุบันเป็นหัวปาร์ตี้ของ squad ใบไหนอยู่แล้วหรือยัง (ใช้กันปุ่ม +)
   Future<bool> hasHostedParty() async {
     final uid = _uid;

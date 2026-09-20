@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 // หน้าโปรไฟล์ผู้ใช้ปัจจุบัน แสดง username + email จริงจาก Firestore/Firebase Auth
 // เปิดได้จากปุ่ม Profile ใน Settings หรือแตะ CircleAvatar ใน HomeTabPage
 class ProfilePage extends StatelessWidget {
@@ -12,10 +14,10 @@ class ProfilePage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(235, 10, 15, 13),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: const Color.fromARGB(248, 25, 53, 40),
+        backgroundColor: AppColors.appBar,
       ),
       body: user == null
           ? const Center(child: Text('ไม่พบผู้ใช้', style: TextStyle(color: Colors.white70)))
@@ -34,9 +36,9 @@ class ProfilePage extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A1A),
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Row(
                       children: [

@@ -1,10 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 
 import '../models/party_model.dart';
 import '../providers/party_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_dialog.dart';
+import '../widgets/game_icon_avatar.dart';
+import '../widgets/squad_member_tile.dart';
 
 // ตัวช่วยเลือกว่าจะแสดง squad ไหนในแท็บ "Squad detail":
 // ถ้ามี selectedPartyId (แตะการ์ดมา) ใช้ตัวนั้น
@@ -64,10 +67,8 @@ class SquadDetailPage extends StatelessWidget {
     final controller = TextEditingController(text: party.description);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('แก้ไขคำอธิบาย', style: TextStyle(color: Colors.white)),
+      builder: (context) => AppAlertDialog(
+        title: 'แก้ไขคำอธิบาย',
         content: TextField(
           controller: controller,
           maxLines: 3,
@@ -78,10 +79,7 @@ class SquadDetailPage extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.white70)),
-          ),
+          const AppCancelButton(),
           ElevatedButton(
             onPressed: () {
               context.read<PartyProvider>().updateDescription(party.id, controller.text.trim());
@@ -94,34 +92,16 @@ class SquadDetailPage extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteParty(BuildContext context, String partyId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('ลบ Squad', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'คุณต้องการลบ Squad นี้ใช่หรือไม่? การกระทำนี้ย้อนกลับไม่ได้',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              await context.read<PartyProvider>().deleteParty(partyId);
-              navigator.pop();
-            },
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteParty(BuildContext context, String partyId) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบ Squad',
+      message: 'คุณต้องการลบ Squad นี้ใช่หรือไม่? การกระทำนี้ย้อนกลับไม่ได้',
+      confirmLabel: 'ลบ',
+      confirmColor: Colors.redAccent,
     );
+    if (!confirmed || !context.mounted) return;
+    await context.read<PartyProvider>().deleteParty(partyId);
   }
 
   Future<void> _joinParty(BuildContext context) async {
@@ -171,77 +151,24 @@ class SquadDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      ClipOval(
-                        child: Image.asset(
-                          party.iconPath,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.white12,
-                            child: const Icon(Icons.videogame_asset, color: Colors.white54),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              party.game,
-                              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '${party.memberCount}/${party.maxMembers} คนใน Party · หัวปาร์ตี้ ${party.hostName}',
-                              style: const TextStyle(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isHost)
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () => _confirmDeleteParty(context, partyId),
-                        ),
-                    ],
+                  _SquadHeader(
+                    party: party,
+                    isHost: isHost,
+                    onDelete: () => _confirmDeleteParty(context, partyId),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text('Description', style: TextStyle(color: Colors.white38, fontSize: 12)),
-                      ),
-                      if (isHost)
-                        GestureDetector(
-                          onTap: () => _showEditDescriptionDialog(context, party),
-                          child: const Icon(Icons.edit, color: Colors.white54, size: 18),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    party.description.isEmpty ? '-' : party.description,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  _DescriptionSection(
+                    party: party,
+                    isHost: isHost,
+                    onEdit: () => _showEditDescriptionDialog(context, party),
                   ),
                   const SizedBox(height: 20),
                   if (!isHost)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isMember ? Colors.redAccent : (isFull ? Colors.white24 : Colors.lightBlue[100]),
-                        ),
-                        onPressed: isMember
-                            ? () => _leaveParty(context)
-                            : (isFull ? null : () => _joinParty(context)),
-                        child: Text(isMember ? 'ออกจาก Squad' : (isFull ? 'เต็มแล้ว' : 'เข้าร่วม Squad')),
-                      ),
+                    _JoinLeaveButton(
+                      isMember: isMember,
+                      isFull: isFull,
+                      onJoin: () => _joinParty(context),
+                      onLeave: () => _leaveParty(context),
                     ),
                   const SizedBox(height: 28),
                   const Text(
@@ -250,7 +177,10 @@ class SquadDetailPage extends StatelessWidget {
                   ),
                   if (isHost) ...[
                     const SizedBox(height: 4),
-                    const Text('ปัดการ์ดไปทางซ้ายเพื่อเตะสมาชิกออก', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    const Text(
+                      'ปัดการ์ดไปทางซ้ายเพื่อเตะสมาชิกออก',
+                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
                   ],
                   const SizedBox(height: 12),
                   ListView.separated(
@@ -260,56 +190,10 @@ class SquadDetailPage extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final member = members[index];
-                      final canKick = isHost && !member.isLeader;
-                      return Slidable(
-                        key: ValueKey(member.uid),
-                        enabled: canKick,
-                        endActionPane: !canKick
-                            ? null
-                            : ActionPane(
-                                motion: const DrawerMotion(),
-                                extentRatio: 0.28,
-                                children: [
-                                  SlidableAction(
-                                    onPressed: (context) =>
-                                        context.read<PartyProvider>().removeMember(partyId, member.uid),
-                                    backgroundColor: Colors.redAccent,
-                                    foregroundColor: Colors.white,
-                                    icon: Icons.person_remove,
-                                    label: 'เตะออก',
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ],
-                              ),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.white12,
-                                backgroundImage:
-                                    member.avatarUrl.isNotEmpty ? NetworkImage(member.avatarUrl) : null,
-                                child: member.avatarUrl.isEmpty
-                                    ? Text(
-                                        member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                                        style: const TextStyle(color: Colors.white),
-                                      )
-                                    : null,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(member.name, style: const TextStyle(color: Colors.white)),
-                              ),
-                              if (member.isLeader)
-                                const Text('หัวปาร์ตี้', style: TextStyle(color: Colors.amber, fontSize: 12)),
-                            ],
-                          ),
-                        ),
+                      return SquadMemberTile(
+                        member: member,
+                        canKick: isHost && !member.isLeader,
+                        onKick: () => context.read<PartyProvider>().removeMember(partyId, member.uid),
                       );
                     },
                   ),
@@ -319,6 +203,109 @@ class SquadDetailPage extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+// หัวการ์ด: ไอคอนเกม + ชื่อเกม + จำนวนสมาชิก + ปุ่มลบ (host เท่านั้น)
+class _SquadHeader extends StatelessWidget {
+  final Party party;
+  final bool isHost;
+  final VoidCallback onDelete;
+
+  const _SquadHeader({required this.party, required this.isHost, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        GameIconAvatar(iconPath: party.iconPath, size: 60),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                party.game,
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${party.memberCount}/${party.maxMembers} คนใน Party · หัวปาร์ตี้ ${party.hostName}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        if (isHost)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: onDelete,
+          ),
+      ],
+    );
+  }
+}
+
+// ส่วน description พร้อมไอคอนดินสอแก้ไข (host เท่านั้น)
+class _DescriptionSection extends StatelessWidget {
+  final Party party;
+  final bool isHost;
+  final VoidCallback onEdit;
+
+  const _DescriptionSection({required this.party, required this.isHost, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Description', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            ),
+            if (isHost)
+              GestureDetector(
+                onTap: onEdit,
+                child: const Icon(Icons.edit, color: Colors.white54, size: 18),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          party.description.isEmpty ? '-' : party.description,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+        ),
+      ],
+    );
+  }
+}
+
+// ปุ่มเข้าร่วม/ออกจาก Squad ของผู้ใช้ที่ไม่ใช่ host — เปลี่ยนสี/ข้อความตามสถานะ
+class _JoinLeaveButton extends StatelessWidget {
+  final bool isMember;
+  final bool isFull;
+  final VoidCallback onJoin;
+  final VoidCallback onLeave;
+
+  const _JoinLeaveButton({
+    required this.isMember,
+    required this.isFull,
+    required this.onJoin,
+    required this.onLeave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isMember ? Colors.redAccent : (isFull ? Colors.white24 : AppColors.primaryButton),
+        ),
+        onPressed: isMember ? onLeave : (isFull ? null : onJoin),
+        child: Text(isMember ? 'ออกจาก Squad' : (isFull ? 'เต็มแล้ว' : 'เข้าร่วม Squad')),
+      ),
     );
   }
 }

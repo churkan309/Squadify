@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/party_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/create_party_dialog.dart';
 import 'community_page.dart';
 import 'home_tab_page.dart';
@@ -58,7 +60,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     showMenu(
       context: context,
-      color: const Color(0xFF1B3A2E),
+      color: AppColors.notificationPopup,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       position: RelativeRect.fromLTRB(
         offset.dx - 180, // เลื่อนซ้ายหน่อยกันล้นขอบจอขวา
@@ -86,23 +88,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     if (!mounted) return;
 
     if (hasParty) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('สร้าง Squad ใหม่ไม่ได้', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'คุณสร้าง Squad ไปแล้ว กรุณาลบ Squad เก่าก่อน ถึงจะสร้างใหม่ได้',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('เข้าใจแล้ว', style: TextStyle(color: Colors.white70)),
-            ),
-          ],
-        ),
+      await showInfoDialog(
+        context,
+        title: 'สร้าง Squad ใหม่ไม่ได้',
+        message: 'คุณสร้าง Squad ไปแล้ว กรุณาลบ Squad เก่าก่อน ถึงจะสร้างใหม่ได้',
       );
       return;
     }
@@ -125,7 +114,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             fontSize: 30,
           ),
         ),
-        backgroundColor: const Color.fromARGB(248, 25, 53, 40),
+        backgroundColor: AppColors.appBar,
         actions: [
           IconButton(
             key: _bellKey,
@@ -145,7 +134,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
-        color: const Color.fromARGB(248, 25, 53, 40),
+        color: AppColors.appBar,
         child: SizedBox(
           height: 20,
           child: Expanded(

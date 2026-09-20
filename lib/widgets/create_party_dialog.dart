@@ -1,27 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../data/game_catalog.dart';
+import '../providers/party_provider.dart';
+import '../services/auth_service.dart';
+import '../theme/app_colors.dart';
 import '../validation/form_validator.dart';
-
-// ข้อมูลเกมแต่ละตัว เก็บเป็น Map กลาง จะได้แก้ทีเดียวถ้าจะเพิ่มเกมใหม่
-class GameInfo {
-  final int maxMembers;
-  final String iconPath; // path รูปใน assets
-
-  GameInfo({required this.maxMembers, required this.iconPath});
-}
-
-final Map<String, GameInfo> gameData = {
-  'League of Legends': GameInfo(
-    maxMembers: 5,
-    iconPath: 'assets/icons/lol.png',
-  ),
-  'Valorant': GameInfo(maxMembers: 5, iconPath: 'assets/icons/valorant.png'),
-  'Dota 2': GameInfo(maxMembers: 5, iconPath: 'assets/icons/dota2.png'),
-  'Overwatch 2': GameInfo(maxMembers: 5, iconPath: 'assets/icons/ow2.png'),
-  'Apex Legends': GameInfo(maxMembers: 3, iconPath: 'assets/icons/apex.png'),
-};
 
 // onCreated: เรียกกลับพร้อม partyId หลังสร้าง Squad สำเร็จ (พาไปหน้า detail ทันที)
 // หมายเหตุ: ผู้เรียกควรเช็ค hasHostedParty() ก่อนเปิด dialog นี้อยู่แล้ว
@@ -30,6 +15,7 @@ void showCreatePartyDialog(
   BuildContext context, {
   void Function(String partyId)? onCreated,
 }) {
+  final partyProvider = context.read<PartyProvider>();
   final TextEditingController descriptionController = TextEditingController();
   final formKey = GlobalKey<FormState>();
   String? selectedGame;
@@ -40,9 +26,7 @@ void showCreatePartyDialog(
     builder: (BuildContext context) {
       return StatefulBuilder(
         builder: (context, setState) {
-          final selectedGameInfo = selectedGame != null
-              ? gameData[selectedGame]
-              : null;
+          final selectedGameInfo = selectedGame != null ? gameCatalog[selectedGame] : null;
 
           Future<void> handleCreate() async {
             if (!formKey.currentState!.validate()) return;
@@ -52,57 +36,31 @@ void showCreatePartyDialog(
             setState(() => isLoading = true);
             final navigator = Navigator.of(context);
             try {
-              final info = gameData[selectedGame]!;
-              final firestore = FirebaseFirestore.instance;
-              final partyRef = firestore.collection('parties').doc();
+              final info = gameCatalog[selectedGame]!;
 
               // ดึง username จริงจาก Firestore มาใช้เป็น hostName (สำรองเป็น displayName)
-              final userDoc = await firestore
-                  .collection('users')
-                  .doc(user.uid)
-                  .get();
-              final hostName =
-                  (userDoc.data()?['username'] as String?) ??
-                  user.displayName ??
-                  'ผู้เล่น';
+              final profile = await AuthService().getUserProfile(user.uid);
+              final hostName = (profile?['username'] as String?) ?? user.displayName ?? 'ผู้เล่น';
 
-              // สร้าง doc party + เพิ่ม host เข้า subcollection members ในคราวเดียว
-              final batch = firestore.batch();
-              batch.set(partyRef, {
-                'game': selectedGame,
-                'iconPath': info.iconPath,
-                'maxMembers': info.maxMembers,
-                'description': descriptionController.text.trim(),
-                'hostId': user.uid,
-                'hostName': hostName,
-                'memberCount': 1,
-                'status': 'open',
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              batch.set(partyRef.collection('members').doc(user.uid), {
-                'name': hostName,
-                'avatarUrl': '',
-                'isLeader': true,
-                'joinedAt': FieldValue.serverTimestamp(),
-              });
-              await batch.commit();
+              final partyId = await partyProvider.createParty(
+                game: selectedGame!,
+                iconPath: info.iconPath,
+                maxMembers: info.maxMembers,
+                description: descriptionController.text.trim(),
+                hostName: hostName,
+              );
 
               navigator.pop();
-              onCreated?.call(partyRef.id);
+              onCreated?.call(partyId);
             } finally {
               setState(() => isLoading = false);
             }
           }
 
           return AlertDialog(
-            backgroundColor: const Color(0xFF1A1A1A),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text(
-              'Create Squad',
-              style: TextStyle(color: Colors.white),
-            ),
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Create Squad', style: TextStyle(color: Colors.white)),
             content: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -113,7 +71,7 @@ void showCreatePartyDialog(
                     // 👇 Dropdown เลือกเกม
                     DropdownButtonFormField<String>(
                       value: selectedGame,
-                      dropdownColor: const Color(0xFF1A1A1A),
+                      dropdownColor: AppColors.surface,
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
                         labelText: 'Game',
@@ -122,14 +80,14 @@ void showCreatePartyDialog(
                           borderSide: BorderSide(color: Colors.white30),
                         ),
                       ),
-                      items: gameData.keys.map((gameName) {
+                      items: gameCatalog.keys.map((gameName) {
                         return DropdownMenuItem(
                           value: gameName,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Image.asset(
-                                gameData[gameName]!.iconPath,
+                                gameCatalog[gameName]!.iconPath,
                                 width: 20,
                                 height: 20,
                               ),
@@ -168,10 +126,7 @@ void showCreatePartyDialog(
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'สมาชิก',
-                            style: TextStyle(color: Colors.white70),
-                          ),
+                          const Text('สมาชิก', style: TextStyle(color: Colors.white70)),
                         ],
                       ),
 
@@ -199,15 +154,10 @@ void showCreatePartyDialog(
             actions: [
               TextButton(
                 onPressed: isLoading ? null : () => Navigator.pop(context),
-                child: const Text(
-                  'ยกเลิก',
-                  style: TextStyle(color: Colors.white70),
-                ),
+                child: const Text('ยกเลิก', style: TextStyle(color: Colors.white70)),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightBlue[100],
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryButton),
                 onPressed: isLoading ? null : handleCreate,
                 child: isLoading
                     ? const SizedBox(

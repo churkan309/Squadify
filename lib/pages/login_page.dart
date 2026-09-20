@@ -3,6 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 import '../services/auth_service.dart';
 import '../validation/form_validator.dart';
+import '../widgets/auth_widgets.dart';
 import 'main_navigation_page.dart';
 import 'register_page.dart';
 
@@ -36,6 +37,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _onSubmit() {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      _login();
+    }
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -45,87 +52,37 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('Squadify')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300.0),
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(15.0),
-              child: FormBuilder(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Login',
-                      style: TextStyle(color: Color.fromARGB(255, 238, 234, 234), fontSize: 30),
-                    ),
-                    const SizedBox(height: 20.0),
-                    FormBuilderTextField(
-                      name: 'email',
-                      style: const TextStyle(color: Colors.white),
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        labelStyle: TextStyle(color: Colors.white),
-                      ),
-                      validator: FormValidator.validateEmail,
-                    ),
-                    const SizedBox(height: 20.0),
-                    FormBuilderTextField(
-                      name: 'password',
-                      style: const TextStyle(color: Colors.white),
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        labelStyle: TextStyle(color: Color.fromARGB(255, 238, 235, 235)),
-                      ),
-                      validator: FormValidator.validatePassword,
-                    ),
-                    const SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              if (_formKey.currentState?.saveAndValidate() ?? false) {
-                                _login();
-                              }
-                            },
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(color: Color.fromARGB(255, 13, 13, 13)),
-                            ),
-                    ),
-                    const SizedBox(height: 12.0),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const RegisterPage()),
-                        );
-                      },
-                      child: const Text(
-                        'ยังไม่มีบัญชี? สมัครสมาชิก',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+    return AuthPageScaffold(
+      formKey: _formKey,
+      title: 'Login',
+      fields: [
+        AuthTextField(
+          name: 'email',
+          controller: _emailController,
+          labelText: 'Email',
+          keyboardType: TextInputType.emailAddress,
+          validator: FormValidator.validateEmail,
         ),
+        AuthTextField(
+          name: 'password',
+          controller: _passwordController,
+          labelText: 'Password',
+          obscureText: true,
+          validator: FormValidator.validatePassword,
+        ),
+      ],
+      submitButton: AuthSubmitButton(
+        isLoading: _isLoading,
+        onPressed: _onSubmit,
+        label: 'Login',
+      ),
+      footer: AuthFooterLink(
+        label: 'ยังไม่มีบัญชี? สมัครสมาชิก',
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const RegisterPage()),
+          );
+        },
       ),
     );
   }

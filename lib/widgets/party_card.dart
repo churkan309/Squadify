@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/party_model.dart';
+import '../theme/app_colors.dart';
+import 'game_icon_avatar.dart';
 
 class PartyCard extends StatelessWidget {
   final Party party;
@@ -15,29 +17,16 @@ class PartyCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white24),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                ClipOval(
-                  child: Image.asset(
-                    party.iconPath,
-                    width: 44,
-                    height: 44,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 44,
-                      height: 44,
-                      color: Colors.white12,
-                      child: const Icon(Icons.videogame_asset, color: Colors.white54),
-                    ),
-                  ),
-                ),
+                GameIconAvatar(iconPath: party.iconPath, size: 44),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -73,6 +62,37 @@ class PartyCard extends StatelessWidget {
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// grid 2 คอลัมน์ของ PartyCard — ก่อนหน้านี้ home_tab_page.dart มี GridView.builder
+// แบบนี้ copy อยู่ 2 จุด (squad ของฉัน / squad ที่เปิดรับ) ต่างกันแค่ list ที่ส่งเข้ามา
+class PartyGrid extends StatelessWidget {
+  final List<Party> parties;
+  final void Function(String partyId) onViewSquad;
+
+  const PartyGrid({super.key, required this.parties, required this.onViewSquad});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: parties.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 120,
+        ),
+        itemBuilder: (context, index) => PartyCard(
+          party: parties[index],
+          onTap: () => onViewSquad(parties[index].id),
         ),
       ),
     );
