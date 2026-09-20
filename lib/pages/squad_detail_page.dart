@@ -61,7 +61,8 @@ class SquadDetailPage extends StatelessWidget {
   const SquadDetailPage({super.key, required this.partyId});
 
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
-  String get _displayName => FirebaseAuth.instance.currentUser?.displayName ?? 'ผู้เล่น';
+  String get _displayName =>
+      FirebaseAuth.instance.currentUser?.displayName ?? 'ผู้เล่น';
 
   void _showEditDescriptionDialog(BuildContext context, Party party) {
     final controller = TextEditingController(text: party.description);
@@ -75,14 +76,19 @@ class SquadDetailPage extends StatelessWidget {
           autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white30),
+            ),
           ),
         ),
         actions: [
           const AppCancelButton(),
           ElevatedButton(
             onPressed: () {
-              context.read<PartyProvider>().updateDescription(party.id, controller.text.trim());
+              context.read<PartyProvider>().updateDescription(
+                party.id,
+                controller.text.trim(),
+              );
               Navigator.pop(context);
             },
             child: const Text('บันทึก'),
@@ -106,7 +112,10 @@ class SquadDetailPage extends StatelessWidget {
 
   Future<void> _joinParty(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final error = await context.read<PartyProvider>().joinParty(partyId, name: _displayName);
+    final error = await context.read<PartyProvider>().joinParty(
+      partyId,
+      name: _displayName,
+    );
     if (error != null) {
       messenger.showSnackBar(SnackBar(content: Text(error)));
     }
@@ -133,7 +142,10 @@ class SquadDetailPage extends StatelessWidget {
         final party = partySnapshot.data;
         if (party == null) {
           return const Center(
-            child: Text('ไม่พบ Squad นี้', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'ไม่พบ Squad นี้',
+              style: TextStyle(color: Colors.white70),
+            ),
           );
         }
 
@@ -164,16 +176,27 @@ class SquadDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   if (!isHost)
-                    _JoinLeaveButton(
-                      isMember: isMember,
-                      isFull: isFull,
-                      onJoin: () => _joinParty(context),
-                      onLeave: () => _leaveParty(context),
+                    StreamBuilder<Party?>(
+                      stream: partyProvider.myHostedParty,
+                      builder: (context, hostedSnap) {
+                        final hostsAnother = hostedSnap.data != null;
+                        return _JoinLeaveButton(
+                          isMember: isMember,
+                          isFull: isFull,
+                          hostsAnother: hostsAnother,
+                          onJoin: () => _joinParty(context),
+                          onLeave: () => _leaveParty(context),
+                        );
+                      },
                     ),
                   const SizedBox(height: 28),
                   const Text(
                     'สมาชิกใน Squad',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (isHost) ...[
                     const SizedBox(height: 4),
@@ -193,7 +216,9 @@ class SquadDetailPage extends StatelessWidget {
                       return SquadMemberTile(
                         member: member,
                         canKick: isHost && !member.isLeader,
-                        onKick: () => context.read<PartyProvider>().removeMember(partyId, member.uid),
+                        onKick: () => context
+                            .read<PartyProvider>()
+                            .removeMember(partyId, member.uid),
                       );
                     },
                   ),
@@ -213,7 +238,11 @@ class _SquadHeader extends StatelessWidget {
   final bool isHost;
   final VoidCallback onDelete;
 
-  const _SquadHeader({required this.party, required this.isHost, required this.onDelete});
+  const _SquadHeader({
+    required this.party,
+    required this.isHost,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +256,11 @@ class _SquadHeader extends StatelessWidget {
             children: [
               Text(
                 party.game,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 '${party.memberCount}/${party.maxMembers} คนใน Party · หัวปาร์ตี้ ${party.hostName}',
@@ -252,7 +285,11 @@ class _DescriptionSection extends StatelessWidget {
   final bool isHost;
   final VoidCallback onEdit;
 
-  const _DescriptionSection({required this.party, required this.isHost, required this.onEdit});
+  const _DescriptionSection({
+    required this.party,
+    required this.isHost,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +299,10 @@ class _DescriptionSection extends StatelessWidget {
         Row(
           children: [
             const Expanded(
-              child: Text('Description', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              child: Text(
+                'Description',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
             ),
             if (isHost)
               GestureDetector(
@@ -285,26 +325,37 @@ class _DescriptionSection extends StatelessWidget {
 class _JoinLeaveButton extends StatelessWidget {
   final bool isMember;
   final bool isFull;
+  final bool hostsAnother;
   final VoidCallback onJoin;
   final VoidCallback onLeave;
 
   const _JoinLeaveButton({
     required this.isMember,
     required this.isFull,
+    required this.hostsAnother,
     required this.onJoin,
     required this.onLeave,
   });
 
   @override
   Widget build(BuildContext context) {
+    final blocked = !isMember && (isFull || hostsAnother);
+    final label = isMember
+        ? 'ออกจาก Squad'
+        : hostsAnother
+        ? 'คุณเป็นหัวปาร์ตี้แล้ว'
+        : (isFull ? 'เต็มแล้ว' : 'เข้าร่วม Squad');
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isMember ? Colors.redAccent : (isFull ? Colors.white24 : AppColors.primaryButton),
+          backgroundColor: isMember
+              ? Colors.redAccent
+              : (blocked ? Colors.white24 : AppColors.primaryButton),
         ),
-        onPressed: isMember ? onLeave : (isFull ? null : onJoin),
-        child: Text(isMember ? 'ออกจาก Squad' : (isFull ? 'เต็มแล้ว' : 'เข้าร่วม Squad')),
+        onPressed: isMember ? onLeave : (blocked ? null : onJoin),
+        child: Text(label),
       ),
     );
   }

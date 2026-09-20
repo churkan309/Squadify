@@ -24,7 +24,8 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
   String? _selectedPartyId;
-  final GlobalKey _bellKey = GlobalKey(); // ใช้หาตำแหน่งกระดิ่งบนจอ เพื่อเด้ง popup ออกจากจุดนั้น
+  final GlobalKey _bellKey =
+      GlobalKey(); // ใช้หาตำแหน่งกระดิ่งบนจอ เพื่อเด้ง popup ออกจากจุดนั้น
 
   // แตะการ์ด squad (ของตัวเองหรือของคนอื่น) แล้วพาไปแท็บ detail พร้อม partyId
   void _onViewSquad(String partyId) {
@@ -71,7 +72,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       items: const [
         PopupMenuItem(
           enabled: false,
-          child: Text('ยังไม่มีการแจ้งเตือนใหม่', style: TextStyle(color: Colors.white70)),
+          child: Text(
+            'ยังไม่มีการแจ้งเตือนใหม่',
+            style: TextStyle(color: Colors.white70),
+          ),
         ),
       ],
     );
@@ -85,20 +89,31 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   Future<void> _onCreateSquadPressed() async {
     final partyProvider = context.read<PartyProvider>();
     final hasParty = await partyProvider.hasHostedParty();
+    final isMember = await partyProvider.isMemberOfAnyParty();
     if (!mounted) return;
 
     if (hasParty) {
       await showInfoDialog(
         context,
         title: 'สร้าง Squad ใหม่ไม่ได้',
-        message: 'คุณสร้าง Squad ไปแล้ว กรุณาลบ Squad เก่าก่อน ถึงจะสร้างใหม่ได้',
+        message:
+            'คุณสร้าง Squad ไปแล้ว กรุณาลบ Squad เก่าก่อน ถึงจะสร้างใหม่ได้',
+      );
+      return;
+    }
+    if (isMember) {
+      await showInfoDialog(
+        context,
+        title: 'สร้าง Squad ใหม่ไม่ได้',
+        message: 'คุณอยู่ใน Squad ของคนอื่นอยู่ กรุณาออกก่อน ถึงจะสร้างใหม่ได้',
       );
       return;
     }
 
     showCreatePartyDialog(
       context,
-      onCreated: (partyId) => _onViewSquad(partyId), // สร้างเสร็จ พาไปหน้า detail ทันที
+      onCreated: (partyId) =>
+          _onViewSquad(partyId), // สร้างเสร็จ พาไปหน้า detail ทันที
     );
   }
 
@@ -119,7 +134,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           IconButton(
             key: _bellKey,
             onPressed: _showNotificationDropdown,
-            icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
+            icon: const Icon(
+              Icons.notifications,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ],
       ),
@@ -150,7 +169,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                   icon: const Icon(Icons.group),
                   color: _selectedIndex == 1 ? Colors.white : Colors.white54,
                   onPressed: () => setState(() {
-                    _selectedPartyId = null; // แตะแท็บตรงๆ กลับไปดู squad ของตัวเอง
+                    _selectedPartyId =
+                        null; // แตะแท็บตรงๆ กลับไปดู squad ของตัวเอง
                     _selectedIndex = 1;
                   }),
                 ),

@@ -74,7 +74,9 @@ class _CommunityPageState extends State<CommunityPage> {
                   decoration: const InputDecoration(
                     hintText: 'พูดคุยอะไรกับชุมชนดี...',
                     hintStyle: TextStyle(color: Colors.white38),
-                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white30),
+                    ),
                   ),
                 ),
               ),
@@ -95,7 +97,7 @@ class _CommunityPageState extends State<CommunityPage> {
             builder: (context, posts) => ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: posts.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) => DiscussionPostCard(
                 post: posts[index],
                 onCommentTap: () => _openComments(posts[index].id),

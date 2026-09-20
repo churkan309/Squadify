@@ -74,6 +74,10 @@ class PartyProvider {
     final uid = _uid;
     if (uid == null) throw StateError('กรุณาล็อกอินก่อน');
 
+    if (await hasHostedParty() || await isMemberOfAnyParty()) {
+      throw StateError('คุณอยู่ใน Squad อื่นอยู่แล้ว');
+    }
+
     final partyRef = _parties.doc();
     final batch = _firestore.batch();
     batch.set(partyRef, {
@@ -88,6 +92,7 @@ class PartyProvider {
       'createdAt': FieldValue.serverTimestamp(),
     });
     batch.set(partyRef.collection('members').doc(uid), {
+      'uid': uid,
       'name': hostName,
       'avatarUrl': '',
       'isLeader': true,
@@ -105,6 +110,17 @@ class PartyProvider {
     return snap.docs.isNotEmpty;
   }
 
+  Future<bool> isMemberOfAnyParty() async {
+    final uid = _uid;
+    if (uid == null) return false;
+    final snap = await _firestore
+        .collectionGroup('members')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    return snap.docs.isNotEmpty;
+  }
+
   // เข้าร่วม squad คนอื่น: กัน join ซ้ำ, กันเกิน maxMembers,
   // อัปเดต status เป็น 'full' อัตโนมัติเมื่อเต็ม — ทั้งหมดในทรานแซกชันเดียว
   // คืนค่า null = สำเร็จ, คืนข้อความ = ทำไม่สำเร็จ (ไว้ขึ้น SnackBar)
@@ -115,6 +131,11 @@ class PartyProvider {
   }) async {
     final uid = _uid;
     if (uid == null) return 'กรุณาล็อกอินก่อน';
+
+    // หัวปาร์ตี้ join squad อื่นไม่ได้
+    if (await hasHostedParty()) {
+      return 'คุณเป็นหัวปาร์ตี้อยู่แล้ว เข้าร่วม Squad อื่นไม่ได้';
+    }
 
     return _firestore.runTransaction<String?>((tx) async {
       final partyRef = _parties.doc(partyId);
@@ -131,6 +152,7 @@ class PartyProvider {
       if (memberCount >= maxMembers) return 'Squad นี้เต็มแล้ว';
 
       tx.set(memberRef, {
+        'uid': uid,
         'name': name,
         'avatarUrl': avatarUrl,
         'isLeader': false,
@@ -156,9 +178,9 @@ class PartyProvider {
       if (!partySnap.exists) return 'ไม่พบ Squad นี้';
 
       final data = partySnap.data()!;
-      if (data['hostId'] == uid)
+      if (data['hostId'] == uid) {
         return 'หัวปาร์ตี้ออกจาก Squad ตัวเองไม่ได้ ให้ลบ Squad แทน';
-
+      }
       final memberRef = partyRef.collection('members').doc(uid);
       final memberSnap = await tx.get(memberRef);
       if (!memberSnap.exists) return 'คุณไม่ได้อยู่ใน Squad นี้';
@@ -166,10 +188,7 @@ class PartyProvider {
       tx.delete(memberRef);
       final memberCount = data['memberCount'] as int? ?? 1;
       final newCount = memberCount > 0 ? memberCount - 1 : 0;
-      tx.update(partyRef, {
-        'memberCount': newCount,
-        'status': 'open',
-      });
+      tx.update(partyRef, {'memberCount': newCount, 'status': 'open'});
       return null;
     });
   }
@@ -195,10 +214,7 @@ class PartyProvider {
       tx.delete(memberRef);
       final memberCount = data['memberCount'] as int? ?? 1;
       final newCount = memberCount > 0 ? memberCount - 1 : 0;
-      tx.update(partyRef, {
-        'memberCount': newCount,
-        'status': 'open',
-      });
+      tx.update(partyRef, {'memberCount': newCount, 'status': 'open'});
     });
   }
 
