@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/settings_tile.dart';
 import 'login_page.dart';
+import 'members_page.dart';
 import 'profile_page.dart';
 
-// แท็บ "ตั้งค่า" — Profile กับ Logout (Logout เรียก AuthService จริง)
+// แท็บ "ตั้งค่า" — Profile, สมาชิก และ Logout
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -21,6 +22,16 @@ class SettingsPage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ProfilePage()),
+            );
+          },
+        ),
+        SettingsTile(
+          icon: Icons.groups_outlined,
+          title: 'สมาชิก',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MembersPage()),
             );
           },
         ),

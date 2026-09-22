@@ -28,7 +28,7 @@ class HomeTabPage extends StatelessWidget {
 
           const _SectionTitle('Squad ของฉัน'),
           AsyncStreamSection<Party?>(
-            stream: partyProvider.myHostedParty,
+            stream: partyProvider.myCurrentParty,
             emptyMessage: 'ยังไม่มี Squad กดปุ่ม + ด้านล่างเพื่อสร้าง Squad แรกของคุณ',
             errorMessage: 'โหลด Squad ไม่สำเร็จ',
             builder: (context, party) => PartyGrid(

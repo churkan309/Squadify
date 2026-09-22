@@ -11,7 +11,7 @@ import '../widgets/squad_member_tile.dart';
 
 // ตัวช่วยเลือกว่าจะแสดง squad ไหนในแท็บ "Squad detail":
 // ถ้ามี selectedPartyId (แตะการ์ดมา) ใช้ตัวนั้น
-// ถ้า null (แตะแท็บตรงๆ) fallback ไปดู squad ที่ตัวเองเป็นหัวปาร์ตี้
+// ถ้า null (แตะแท็บตรงๆ) fallback ไปดู squad ที่ตัวเองอยู่
 class SquadDetailPageResolver extends StatelessWidget {
   final String? selectedPartyId;
   final void Function(String partyId) onViewSquad;
@@ -29,7 +29,7 @@ class SquadDetailPageResolver extends StatelessWidget {
     }
 
     return StreamBuilder<Party?>(
-      stream: context.read<PartyProvider>().myHostedParty,
+      stream: context.read<PartyProvider>().myCurrentParty,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -210,7 +210,7 @@ class SquadDetailPage extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: members.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final member = members[index];
                       return SquadMemberTile(

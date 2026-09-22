@@ -43,6 +43,24 @@ class PartyProvider {
         );
   }
 
+  // squad ที่ผู้ใช้กำลังอยู่ ไม่ว่าจะเป็น host หรือสมาชิกที่ join แล้ว
+  Stream<Party?> get myCurrentParty {
+    final uid = _uid;
+    if (uid == null) return Stream.value(null);
+    return _firestore
+        .collectionGroup('members')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .snapshots()
+        .asyncMap((snap) async {
+          if (snap.docs.isEmpty) return null;
+          final partyRef = snap.docs.first.reference.parent.parent;
+          if (partyRef == null) return null;
+          final partySnap = await partyRef.get();
+          return partySnap.exists ? Party.fromFirestore(partySnap) : null;
+        });
+  }
+
   Stream<Party?> partyById(String id) {
     return _parties
         .doc(id)
@@ -193,18 +211,28 @@ class PartyProvider {
     });
   }
 
-  // แก้ description ได้เฉพาะ host (ฝั่ง UI ซ่อนปุ่มไว้แล้ว, security rules กันซ้ำอีกชั้น)
+  // แก้ description ได้เฉพาะ host
   Future<void> updateDescription(String partyId, String text) async {
-    await _parties.doc(partyId).update({'description': text});
+    final uid = _uid;
+    if (uid == null) throw StateError('กรุณาล็อกอินก่อน');
+    final partyRef = _parties.doc(partyId);
+    final partySnap = await partyRef.get();
+    if (!partySnap.exists || partySnap.data()?['hostId'] != uid) {
+      throw StateError('เฉพาะหัวปาร์ตี้เท่านั้นที่แก้ไขได้');
+    }
+    await partyRef.update({'description': text});
   }
 
   // host เตะสมาชิกออก (เตะตัวเองไม่ได้)
   Future<void> removeMember(String partyId, String memberUid) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('กรุณาล็อกอินก่อน');
     final partyRef = _parties.doc(partyId);
     await _firestore.runTransaction((tx) async {
       final partySnap = await tx.get(partyRef);
       if (!partySnap.exists) return;
       final data = partySnap.data()!;
+      if (data['hostId'] != uid) return;
       if (data['hostId'] == memberUid) return; // host เตะตัวเองไม่ได้
 
       final memberRef = partyRef.collection('members').doc(memberUid);
@@ -221,6 +249,10 @@ class PartyProvider {
   // ลบ squad ทั้งอัน ลบ subcollection members ทิ้งด้วย
   Future<void> deleteParty(String partyId) async {
     final partyRef = _parties.doc(partyId);
+    final partySnap = await partyRef.get();
+    if (!partySnap.exists || partySnap.data()?['hostId'] != _uid) {
+      throw StateError('เฉพาะหัวปาร์ตี้เท่านั้นที่ลบได้');
+    }
     final membersSnap = await partyRef.collection('members').get();
     final batch = _firestore.batch();
     for (final doc in membersSnap.docs) {
