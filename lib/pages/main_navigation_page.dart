@@ -126,37 +126,35 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         color: AppColors.appBar,
         child: SizedBox(
           height: 20,
-          child: Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.home),
-                  color: _selectedIndex == 0 ? Colors.white : Colors.white54,
-                  onPressed: () => setState(() => _selectedIndex = 0),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.group),
-                  color: _selectedIndex == 1 ? Colors.white : Colors.white54,
-                  onPressed: () => setState(() {
-                    _selectedPartyId =
-                        null; // แตะแท็บตรงๆ กลับไปดู squad ของตัวเอง
-                    _selectedIndex = 1;
-                  }),
-                ),
-                const SizedBox(width: 48), // เว้นที่ให้ FAB ตรงกลาง
-                IconButton(
-                  icon: const Icon(Icons.forum),
-                  color: _selectedIndex == 2 ? Colors.white : Colors.white54,
-                  onPressed: () => setState(() => _selectedIndex = 2),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  color: _selectedIndex == 3 ? Colors.white : Colors.white54,
-                  onPressed: () => setState(() => _selectedIndex = 3),
-                ),
-              ],
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.home),
+                color: _selectedIndex == 0 ? Colors.white : Colors.white54,
+                onPressed: () => setState(() => _selectedIndex = 0),
+              ),
+              IconButton(
+                icon: const Icon(Icons.group),
+                color: _selectedIndex == 1 ? Colors.white : Colors.white54,
+                onPressed: () => setState(() {
+                  _selectedPartyId =
+                      null; // แตะแท็บตรงๆ กลับไปดู squad ของตัวเอง
+                  _selectedIndex = 1;
+                }),
+              ),
+              const SizedBox(width: 48), // เว้นที่ให้ FAB ตรงกลาง
+              IconButton(
+                icon: const Icon(Icons.forum),
+                color: _selectedIndex == 2 ? Colors.white : Colors.white54,
+                onPressed: () => setState(() => _selectedIndex = 2),
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                color: _selectedIndex == 3 ? Colors.white : Colors.white54,
+                onPressed: () => setState(() => _selectedIndex = 3),
+              ),
+            ],
           ),
         ),
       ),

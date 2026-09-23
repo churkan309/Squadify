@@ -66,36 +66,63 @@ class SquadDetailPage extends StatelessWidget {
 
   void _showEditDescriptionDialog(BuildContext context, Party party) {
     final controller = TextEditingController(text: party.description);
-    showDialog(
+    var isSaving = false;
+    showDialog<void>(
       context: context,
-      builder: (context) => AppAlertDialog(
-        title: 'แก้ไขคำอธิบาย',
-        content: TextField(
-          controller: controller,
-          maxLines: 3,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white30),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AppAlertDialog(
+          title: 'แก้ไขคำอธิบาย',
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white30),
+              ),
             ),
           ),
+          actions: [
+            AppCancelButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setState(() => isSaving = true);
+                      try {
+                        await context.read<PartyProvider>().updateDescription(
+                          party.id,
+                          controller.text.trim(),
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        setState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'บันทึกคำอธิบายไม่สำเร็จ กรุณาลองใหม่',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('บันทึก'),
+            ),
+          ],
         ),
-        actions: [
-          const AppCancelButton(),
-          ElevatedButton(
-            onPressed: () {
-              context.read<PartyProvider>().updateDescription(
-                party.id,
-                controller.text.trim(),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 
   Future<void> _confirmDeleteParty(BuildContext context, String partyId) async {

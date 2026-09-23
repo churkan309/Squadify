@@ -26,7 +26,9 @@ void showCreatePartyDialog(
     builder: (BuildContext context) {
       return StatefulBuilder(
         builder: (context, setState) {
-          final selectedGameInfo = selectedGame != null ? gameCatalog[selectedGame] : null;
+          final selectedGameInfo = selectedGame != null
+              ? gameCatalog[selectedGame]
+              : null;
 
           Future<void> handleCreate() async {
             if (!formKey.currentState!.validate()) return;
@@ -40,7 +42,10 @@ void showCreatePartyDialog(
 
               // ดึง username จริงจาก Firestore มาใช้เป็น hostName (สำรองเป็น displayName)
               final profile = await AuthService().getUserProfile(user.uid);
-              final hostName = (profile?['username'] as String?) ?? user.displayName ?? 'ผู้เล่น';
+              final hostName =
+                  (profile?['username'] as String?) ??
+                  user.displayName ??
+                  'ผู้เล่น';
 
               final partyId = await partyProvider.createParty(
                 game: selectedGame!,
@@ -50,17 +55,32 @@ void showCreatePartyDialog(
                 hostName: hostName,
               );
 
+              if (!context.mounted) return;
+              setState(() => isLoading = false);
               navigator.pop();
               onCreated?.call(partyId);
-            } finally {
+            } catch (_) {
+              if (!context.mounted) return;
               setState(() => isLoading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('สร้าง Squad ไม่สำเร็จ กรุณาลองใหม่'),
+                ),
+              );
+            } finally {
+              descriptionController.clear();
             }
           }
 
           return AlertDialog(
             backgroundColor: AppColors.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Create Squad', style: TextStyle(color: Colors.white)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Create Squad',
+              style: TextStyle(color: Colors.white),
+            ),
             content: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -69,7 +89,7 @@ void showCreatePartyDialog(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: selectedGame,
+                      initialValue: selectedGame,
                       dropdownColor: AppColors.surface,
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
@@ -124,7 +144,10 @@ void showCreatePartyDialog(
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Text('สมาชิก', style: TextStyle(color: Colors.white70)),
+                          const Text(
+                            'สมาชิก',
+                            style: TextStyle(color: Colors.white70),
+                          ),
                         ],
                       ),
 
@@ -151,10 +174,15 @@ void showCreatePartyDialog(
             actions: [
               TextButton(
                 onPressed: isLoading ? null : () => Navigator.pop(context),
-                child: const Text('ยกเลิก', style: TextStyle(color: Colors.white70)),
+                child: const Text(
+                  'ยกเลิก',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryButton),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryButton,
+                ),
                 onPressed: isLoading ? null : handleCreate,
                 child: isLoading
                     ? const SizedBox(

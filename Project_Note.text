@@ -1,0 +1,777 @@
+SQUADIFY - PROJECT NOTE
+=======================
+
+เอกสารนี้อธิบายโครงสร้างและการทำงานของโปรเจกต์ Squadify ตามโค้ดปัจจุบัน
+ใช้เป็นเอกสารสำหรับทำความเข้าใจโปรเจกต์ แก้ไขโค้ด และพัฒนาฟีเจอร์ต่อ
+
+
+1. ภาพรวมโปรเจกต์
+------------------
+
+Squadify เป็นแอป Flutter สำหรับหาและจัดการกลุ่มเล่นเกม (Squad/Party)
+ผู้ใช้สามารถทำงานหลักได้ดังนี้:
+
+- สมัครสมาชิกและเข้าสู่ระบบด้วย Email/Password ผ่าน Firebase Authentication
+- สร้าง Squad ของตัวเอง โดยเลือกเกม จำนวนสมาชิก และคำอธิบาย
+- ดู Squad ที่เปิดรับสมาชิก
+- เข้าร่วม Squad หรือออกจาก Squad
+- ดูสมาชิกใน Squad และจัดการสมาชิกในกรณีที่เป็นหัวปาร์ตี้
+- พูดคุยใน Community ของ Party ที่ผู้ใช้อยู่
+- สร้างโพสต์และคอมเมนท์ โดยบันทึก username ของผู้เขียน
+- ดู Profile และออกจากระบบ
+
+เทคโนโลยีหลัก:
+
+- Flutter/Dart: UI และ application logic
+- Provider: dependency injection และ state management
+- Firebase Authentication: ผู้ใช้และ session การเข้าสู่ระบบ
+- Cloud Firestore: ฐานข้อมูลผู้ใช้ Party สมาชิก โพสต์ และคอมเมนท์
+- SharedPreferences: เก็บ draft ข้อความ Community ในเครื่อง
+- Firebase Core: initialize Firebase ในแอป
+
+
+2. โครงสร้างโฟลเดอร์ระดับบน
+----------------------------
+
+lib/
+	main.dart                  จุดเริ่มต้นแอปและการลงทะเบียน Provider
+	firebase_options.dart      Firebase configuration ที่สร้างโดย FlutterFire
+
+	data/
+		game_catalog.dart        รายชื่อเกมและข้อมูลเกมแบบคงที่
+
+	models/
+		party_model.dart         Model ของ Party และสมาชิก Party
+
+	pages/
+		login_page.dart          หน้า Login
+		register_page.dart       หน้าสมัครสมาชิก
+		main_navigation_page.dart หน้าหลักและ Bottom Navigation
+		home_tab_page.dart       หน้า Home และรายการ Squad
+		squad_detail_page.dart   รายละเอียด Squad และการจัดการสมาชิก
+		community_page.dart      Community ของ Party ปัจจุบัน
+		profile_page.dart        Profile ของผู้ใช้ปัจจุบัน
+		members_page.dart        หน้ารายชื่อสมาชิกแบบตัวอย่างในปัจจุบัน
+		settings_page.dart       หน้า Settings
+
+	providers/
+		auth_provider.dart       state ของผู้ใช้และ username
+		party_provider.dart      stream/query/คำสั่งเกี่ยวกับ Party
+		community_provider.dart  stream/query/คำสั่งเกี่ยวกับ Community
+
+	services/
+		auth_service.dart        wrapper สำหรับ Firebase Auth และ users profile
+		firestore_service.dart   ชื่อเดิมของ service ที่ใช้ SharedPreferences เก็บ draft
+
+	theme/
+		app_colors.dart          สีมาตรฐานของแอป
+
+	validation/
+		form_validator.dart      validation ของ username/email/password/game
+
+	widgets/
+		app_dialog.dart          Dialog มาตรฐานและปุ่มยืนยัน/ยกเลิก
+		async_stream_section.dart UI กลางสำหรับ loading/error/empty/ข้อมูลจาก Stream
+		auth_widgets.dart        widget กลางของหน้า Login/Register
+		comment_sheet.dart       Bottom sheet แสดงและเพิ่มคอมเมนท์
+		create_party_dialog.dart Dialog สร้าง Party
+		discussion_post_card.dart การ์ดโพสต์ Community
+		game_icon_avatar.dart    แสดง icon เกม
+		party_card.dart          การ์ด Party และ PartyGrid
+		profile_info_bar.dart    แสดงข้อมูล Profile
+		settings_tile.dart       รายการเมนู Settings
+		squad_member_tile.dart   แถวข้อมูลสมาชิก Squad
+
+assets/
+	fonts/                     ฟอนต์ Customfont
+	icons/                     icon เกม เช่น lol, valorant, dota2
+	images/                    รูปภาพประกอบ เช่น whoIsJson.png
+
+android/, ios/, web/
+	ไฟล์ platform configuration และ runner ของ Flutter
+
+build/
+	ไฟล์ผลลัพธ์ที่ Flutter สร้างขึ้น ไม่ควรแก้ด้วยมือ
+
+
+3. จุดเริ่มต้นแอปและ Dependency Injection
+-------------------------------------------
+
+ไฟล์: lib/main.dart
+
+ลำดับการเริ่มแอป:
+
+1. เรียก WidgetsFlutterBinding.ensureInitialized()
+2. เรียก Firebase.initializeApp() ด้วย DefaultFirebaseOptions
+3. สร้าง MultiProvider
+4. เริ่ม MyApp
+5. StartupPage ฟัง FirebaseAuth.authStateChanges()
+6. ถ้ามีผู้ใช้ ให้ไป MainNavigationPage
+7. ถ้าไม่มีผู้ใช้ ให้ไป LoginPage
+
+Provider ที่ลงทะเบียน:
+
+- Provider<PartyProvider>
+	ใช้สำหรับอ่านและแก้ไขข้อมูล Party/สมาชิก
+
+- Provider<CommunityProvider>
+	ใช้สำหรับอ่านและเขียนโพสต์/คอมเมนท์ Community
+
+- ChangeNotifierProvider<AuthProvider>
+	ใช้เก็บผู้ใช้ปัจจุบัน username และแจ้ง UI เมื่อ auth state เปลี่ยน
+
+ตัวแปรสำคัญใน main.dart:
+
+- DefaultFirebaseOptions.currentPlatform
+	configuration ของ Firebase สำหรับ platform ที่กำลังรัน
+- FirebaseAuth.instance.authStateChanges()
+	stream ที่แจ้งว่ามีการ login/logout หรือไม่
+- MaterialApp.title
+	ชื่อแอปสำหรับ metadata ไม่ใช่ข้อความ AppBar ที่แสดงบนหน้าจอ
+
+
+4. Model และตัวแปรข้อมูล
+-------------------------
+
+ไฟล์: lib/models/party_model.dart
+
+4.1 SquadMember
+
+แทนสมาชิกหนึ่งคนใน parties/{partyId}/members/{uid}
+
+- uid: String
+	Firebase Auth UID ของสมาชิก ใช้เป็น document ID ด้วย
+- name: String
+	ชื่อที่บันทึกตอนสร้างหรือเข้าร่วม Party
+- avatarUrl: String
+	URL รูป avatar ปัจจุบันยังมีค่าเริ่มต้นเป็นค่าว่าง
+- isLeader: bool
+	true เมื่อเป็นหัวปาร์ตี้
+- joinedAt: DateTime?
+	เวลาที่เข้าร่วม Party
+
+factory SquadMember.fromFirestore()
+อ่านข้อมูลจาก Firestore document และใช้ค่าเริ่มต้นเมื่อ field ไม่มี
+
+4.2 Party
+
+แทน Squad หนึ่งกลุ่มใน collection parties
+
+- id: String
+	document ID ของ Party
+- game: String
+	ชื่อเกม เช่น Valorant หรือ League of Legends
+- iconPath: String
+	path ของ icon เกมใน assets
+- maxMembers: int
+	จำนวนสมาชิกสูงสุดของเกมนั้น
+- description: String
+	คำอธิบาย Party แก้ได้โดย host
+- hostId: String
+	UID ของหัวปาร์ตี้
+- hostName: String
+	ชื่อหัวปาร์ตี้ที่บันทึกไว้ใน Party
+- memberCount: int
+	จำนวนสมาชิกที่เก็บเป็น counter ใน document Party
+- status: String
+	สถานะ เช่น open, full, closed
+- createdAt: DateTime?
+	เวลาสร้าง Party
+
+factory Party.fromFirestore()
+แปลง Firestore document เป็น Dart model
+
+
+5. Authentication และ Profile
+------------------------------
+
+ไฟล์: lib/services/auth_service.dart
+
+AuthService เป็นชั้นที่คุยกับ Firebase Auth และ users collection
+
+ตัวแปรสำคัญ:
+
+- _auth: FirebaseAuth
+	dependency สำหรับ login/register/logout
+- _firestore: FirebaseFirestore
+	dependency สำหรับอ่านและเขียน users/{uid}
+
+เมธอดหลัก:
+
+- currentUser
+	คืน Firebase User ปัจจุบัน
+- authStateChanges()
+	คืน stream ของสถานะ login
+- signIn(email, password)
+	login ด้วย Email/Password และแปลง error เป็น AuthException
+- signUp(email, password, username)
+	สร้าง Firebase user, ตั้ง displayName และสร้าง profile ใน Firestore
+- signOut()
+	logout
+- getUserProfile(uid)
+	อ่าน users/{uid}
+
+ไฟล์: lib/providers/auth_provider.dart
+
+AuthProvider เป็น ChangeNotifier ที่ครอบ AuthService เพื่อให้ widget ฟังการเปลี่ยนแปลง
+
+ตัวแปรสำคัญ:
+
+- _authService: AuthService
+	service ที่ใช้โหลด auth/profile
+- _authSubscription: StreamSubscription<User?>?
+	subscription ของ authStateChanges และถูก cancel ใน dispose()
+- _user: User?
+	Firebase user ปัจจุบัน
+- _username: String?
+	username ที่โหลดจาก Firestore หรือ displayName เป็น fallback
+- _disposed: bool
+	ป้องกัน async callback เรียก notifyListeners หลัง provider ถูกทำลาย
+
+เมธอดสำคัญ:
+
+- username
+	getter สำหรับ UI
+- currentUsername()
+	อ่าน username จาก users/{uid} แบบ async และ fallback เป็น displayName/ผู้เล่น
+- _onUserChanged()
+	อัปเดต user เมื่อ login/logout
+- _loadUsername()
+	โหลด username จาก Firestore และตรวจ UID/dispose ก่อนอัปเดต
+- dispose()
+	ยกเลิก auth subscription
+
+โครงสร้าง profile ที่ใช้:
+
+users/{uid}
+	uid: String
+	username: String
+	email: String
+	avatarUrl: String
+	createdAt: Timestamp
+
+
+6. Game Catalog
+---------------
+
+ไฟล์: lib/data/game_catalog.dart
+
+GameInfo เก็บข้อมูลเกมแบบคงที่:
+
+- maxMembers: int
+	จำนวนผู้เล่นสูงสุดที่เกมรองรับใน Party
+- iconPath: String
+	path ของรูป icon
+
+gameCatalog เป็น Map<String, GameInfo> โดย key คือชื่อเกม
+ปัจจุบันมี League of Legends, Valorant, Dota 2, Overwatch 2 และ Apex Legends
+
+ถ้าจะเพิ่มเกมใหม่ ให้เพิ่มข้อมูลใน gameCatalog และเตรียม asset icon ให้ตรง path
+หน้าสร้าง Party และตัวกรองเกมใน Home ใช้ catalog เดียวกัน
+
+
+7. PartyProvider และการทำงานของ Squad
+--------------------------------------
+
+ไฟล์: lib/providers/party_provider.dart
+
+ตัวแปรภายใน:
+
+- _firestore: FirebaseFirestore
+	database หลัก
+- _auth: FirebaseAuth
+	ใช้หา UID ผู้ใช้ปัจจุบัน
+- _parties
+	getter ที่ชี้ไป collection parties
+- _uid
+	getter UID ปัจจุบัน ถ้าไม่ได้ login จะเป็น null
+
+Streams สำหรับอ่านข้อมูล:
+
+- allOpenParties
+	Party ที่ status == open เรียง createdAt ล่าสุดก่อน
+- myHostedParty
+	Party ที่ hostId ตรงกับ UID ผู้ใช้
+- myCurrentParty
+	ใช้ collectionGroup('members') หา Party ที่ผู้ใช้อยู่
+- partyById(id)
+	ฟัง Party document เดียว
+- membersOf(partyId)
+	ฟัง members subcollection และเรียง joinedAt
+
+คำสั่งหลัก:
+
+- createParty()
+	ตรวจว่า user ยังไม่มี Party จากนั้น batch เขียน Party และสมาชิก host
+- hasHostedParty()
+	เช็กว่าผู้ใช้เป็น host อยู่แล้วหรือไม่
+- isMemberOfAnyParty()
+	เช็กว่าผู้ใช้อยู่ใน Party ใดหรือไม่
+- joinParty()
+	ใช้ transaction ตรวจ Party, สมาชิกซ้ำ, จำนวนสมาชิก และเพิ่ม memberCount
+- leaveParty()
+	ใช้ transaction ลบสมาชิกและลด memberCount
+- updateDescription()
+	อนุญาตเฉพาะ host ที่ตรงกับ hostId
+- removeMember()
+	host ลบสมาชิกคนอื่นออกและลด memberCount
+- deleteParty()
+	ตรวจ host แล้วลบ members และ Party ด้วย batch
+
+กติกาใน application logic:
+
+- ผู้ใช้หนึ่งคนไม่ควรเป็น host หลาย Party
+- host ไม่สามารถ join Party อื่น
+- host ไม่สามารถ leave Party ตัวเอง ต้องลบ Party
+- เข้าร่วมไม่ได้เมื่อ memberCount ถึง maxMembers
+- เมื่อเต็มจะเปลี่ยน status เป็น full
+
+หมายเหตุ: กติกาเหล่านี้อยู่ใน client/provider เป็นหลัก ปัจจุบัน workspace ไม่มี
+firestore.rules จึงควรเพิ่ม Security Rules ฝั่ง Firebase เพื่อบังคับสิทธิ์จริง
+
+
+8. Main Navigation และหน้าหลัก
+-------------------------------
+
+ไฟล์: lib/pages/main_navigation_page.dart
+
+ตัวแปรใน _MainNavigationPageState:
+
+- _selectedIndex: int
+	index ของ tab: 0 Home, 1 Squad, 2 Community, 3 Settings
+- _selectedPartyId: String?
+	Party ที่ผู้ใช้เลือกจากการ์ดเพื่อเปิดหน้า detail
+
+เมธอดสำคัญ:
+
+- _onViewSquad(partyId)
+	เก็บ Party ID และเปลี่ยนไป tab Squad
+- _getSelectedPage()
+	เลือก widget ตาม selected index
+- _onCreateSquadPressed()
+	ตรวจ hasHostedParty/isMemberOfAnyParty ก่อนเปิด create dialog
+
+หน้าที่ถูกเลือก:
+
+- HomeTabPage
+	แสดง username, Party ของฉัน และ Party เปิดรับ
+- SquadDetailPageResolver
+	ถ้ามี _selectedPartyId ใช้ Party นั้น ถ้าไม่มีใช้ Party ปัจจุบัน
+- CommunityPage
+	เปิดได้เมื่อมี Party ปัจจุบัน และส่ง partyId เข้าไป
+- SettingsPage
+	Profile, สมาชิก และ Logout
+
+
+9. Home และการค้นหา Party
+---------------------------
+
+ไฟล์: lib/pages/home_tab_page.dart
+
+HomeTabPage เป็น StatefulWidget เพราะต้องเก็บตัวกรองเกม
+
+ตัวแปร:
+
+- onViewSquad: callback สำหรับเปิดรายละเอียด Party
+- _selectedGame: String?
+	เกมที่เลือกใน FilterChip; null หมายถึงทุกเกม
+- partyProvider: อ่าน Party stream
+- authProvider: อ่าน user/username
+- username: ชื่อสำหรับ header
+- currentUid: UID ปัจจุบัน ใช้ตัด Party ของตัวเองออกจากรายการเปิดรับ
+
+การกรอง:
+
+- _filterPartiesByGame(parties)
+	ถ้า _selectedGame เป็น null คืนทุก Party
+	ถ้ามีค่า จะคืนเฉพาะ party.game ที่ตรงกัน
+- FilterChip สร้างจาก gameCatalog
+- รายการเปิดรับใช้ allOpenParties แล้ว filter hostId != currentUid
+
+ส่วน UI สำคัญ:
+
+- _ProfileHeader
+	แสดงไอคอน Profile และข้อความ Hello, username
+- PartyGrid
+	แสดง Party เป็น grid 2 คอลัมน์
+- FilterChip
+	มีตัวเลือก All และรายชื่อเกมแบบเลื่อนแนวนอน
+
+
+10. Squad Detail
+-----------------
+
+ไฟล์: lib/pages/squad_detail_page.dart
+
+หน้าจะแสดงข้อมูล Party, จำนวนสมาชิก, รายชื่อสมาชิก และปุ่มตามสิทธิ์ผู้ใช้
+
+ตัวแปร/ข้อมูลสำคัญ:
+
+- partyId: ID ของ Party ที่เปิดดู
+- _uid: UID ผู้ใช้ปัจจุบัน
+- _displayName: displayName สำหรับตอน join Party
+- party: Party ที่ได้จาก partyById
+- members: รายชื่อจาก membersOf(partyId)
+- isMember: ตรวจว่า UID ปัจจุบันอยู่ใน members หรือไม่
+- isFull: ตรวจ memberCount >= maxMembers
+
+ความสามารถ:
+
+- host แก้ description ได้
+- host ลบ Party ได้
+- host เตะสมาชิกได้
+- user อื่น join/leave ได้ตามสถานะ
+- แสดงปุ่ม join เมื่อยังไม่เป็นสมาชิกและ Party ยังไม่เต็ม
+
+การแก้ description ใช้ dialog แบบ async มี loading state และแสดง SnackBar เมื่อบันทึกไม่สำเร็จ
+
+
+11. Community
+-------------
+
+ไฟล์: lib/providers/community_provider.dart
+
+11.1 DiscussionPost
+
+- id: document ID
+- partyId: Party เจ้าของกระทู้
+- authorId: UID คนโพสต์
+- authorName: username ที่แสดงบนโพสต์
+- content: เนื้อหา
+- commentCount: จำนวนคอมเมนท์
+- createdAt: เวลาโพสต์
+
+11.2 PostComment
+
+- id: document ID ของคอมเมนท์
+- authorId: UID คนคอมเมนท์
+- authorName: username ของคนคอมเมนท์
+- content: ข้อความคอมเมนท์
+- createdAt: เวลาคอมเมนท์
+
+11.3 CommunityProvider
+
+- _firestore: Firestore instance
+- _auth: Auth instance
+- _cache: service สำหรับ draft
+- _posts: getter ของ collection posts
+- _uid: UID ผู้ใช้ปัจจุบัน
+
+เมธอด:
+
+- postsForParty(partyId)
+	อ่านโพสต์ที่ partyId ตรงกันและเรียง createdAt ใน Dart
+- commentsOf(postId)
+	อ่าน posts/{postId}/comments
+- addPost(partyId, content, authorName)
+	สร้างโพสต์ใหม่และล้าง draft หลังสำเร็จ
+- addComment(postId, content, authorName)
+	ใช้ transaction เพิ่ม comment และเพิ่ม commentCount
+- saveDraft/readDraft()
+	บันทึกหรืออ่าน draft จาก local storage
+
+ไฟล์: lib/pages/community_page.dart
+
+- partyId: Party ที่กำลังเปิด Community
+- _postController: controller ของช่องโพสต์
+- _loadDraft(): โหลด draft เมื่อเปิดหน้า
+- _addPost(): อ่าน username จริงก่อนสร้างโพสต์
+- _openComments(): เปิด comment sheet พร้อม username ของผู้ใช้
+
+การเข้าถึง Community ถูกผูกกับ myCurrentParty ใน MainNavigationPage
+ถ้าไม่มี Party จะแสดงข้อความว่าไม่สามารถเข้าชุมชนได้
+
+โครงสร้าง Firestore:
+
+posts/{postId}
+	partyId: String
+	authorId: String
+	authorName: String
+	content: String
+	commentCount: int
+	createdAt: Timestamp
+
+posts/{postId}/comments/{commentId}
+	authorId: String
+	authorName: String
+	content: String
+	createdAt: Timestamp
+
+
+12. ฐานข้อมูลและการจัดเก็บข้อมูล
+---------------------------------
+
+ระบบใช้ Cloud Firestore เป็น NoSQL document database
+ข้อมูลไม่ได้เก็บเป็นตาราง/row แบบ SQL แต่เป็น collection/document/subcollection
+
+Collections ปัจจุบัน:
+
+1. users
+	 users/{uid}
+	 profile ของผู้ใช้
+
+2. parties
+	 parties/{partyId}
+	 ข้อมูล Party
+
+	 parties/{partyId}/members/{uid}
+	 สมาชิกของ Party
+
+3. posts
+	 posts/{postId}
+	 กระทู้ Community โดยมี partyId เป็นตัวเชื่อมกับ Party
+
+	 posts/{postId}/comments/{commentId}
+	 คอมเมนท์ของกระทู้
+
+Local storage:
+
+- SharedPreferences key: community_draft
+- ใช้เก็บข้อความ draft ที่ผู้ใช้พิมพ์ค้างไว้
+- ชื่อไฟล์ firestore_service.dart เป็นชื่อเดิม แต่ service นี้ไม่ได้คุย Firestore
+
+Timestamp:
+
+- ตอนเขียนใช้ FieldValue.serverTimestamp()
+- ตอนอ่านแปลงเป็น DateTime?
+- ค่า server timestamp อาจเป็น null ชั่วคราวก่อน Firestore ประมวลผล
+
+
+13. Widgets กลาง
+----------------
+
+- AsyncStreamSection<T>
+	ลดโค้ดซ้ำของ StreamBuilder โดยจัดการ loading, error, empty และ builder
+
+- PartyCard
+	การ์ด Party หนึ่งใบ แสดง icon เกม, ชื่อเกม, จำนวนสมาชิก และ description
+
+- PartyGrid
+	Grid 2 คอลัมน์สำหรับ PartyCard
+
+- DiscussionPostCard
+	แสดง authorName, content และจำนวนคอมเมนท์
+
+- Comment sheet
+	แสดงรายการ PostComment และช่องเพิ่มคอมเมนท์
+
+- AppAlertDialog
+	dialog พื้นฐานสีและ shape ตามธีมแอป
+
+- SettingsTile
+	แถวเมนูสำหรับ Settings
+
+- AuthPageScaffold/AuthTextField/AuthSubmitButton/AuthFooterLink
+	ชุด widget ที่ใช้ร่วมกันใน Login/Register
+
+- GameIconAvatar
+	แสดงรูป icon ของเกมจาก asset path
+
+- ProfileInfoBar
+	แสดงชื่อและข้อมูลรองของผู้ใช้
+
+
+14. Theme และสี
+---------------
+
+ไฟล์: lib/theme/app_colors.dart
+
+- background: สีพื้นหลังหลักของ Scaffold
+- appBar: สี AppBar และ BottomAppBar
+- surface: สีการ์ด/dialog/bottom sheet
+- primaryButton: สีปุ่มหลัก
+- border: สีเส้นขอบ
+- textPrimary: ข้อความหลัก
+- textSecondary: ข้อความรอง
+- textMuted/textFaint: ข้อความจาง
+
+ThemeData ใน main.dart ใช้:
+
+- scaffoldBackgroundColor: AppColors.background
+- fontFamily: Customfont
+- Material color scheme จาก seed color
+
+
+15. Validation และ Form
+------------------------
+
+ไฟล์: lib/validation/form_validator.dart
+
+ใช้ตรวจค่าจาก Login/Register/Create Party เช่น:
+
+- username ต้องไม่ว่างและต้องตรงเงื่อนไขที่กำหนด
+- email ต้องมีรูปแบบถูกต้อง
+- password ต้องตรงความยาวขั้นต่ำ
+- game ต้องถูกเลือก
+
+Login และ Register ใช้ flutter_form_builder ผ่าน GlobalKey<FormBuilderState>
+
+
+16. Dependencies สำคัญ
+-----------------------
+
+จาก pubspec.yaml:
+
+- provider: state management และ dependency injection
+- cloud_firestore: Firestore SDK
+- firebase_core: initialize Firebase
+- firebase_auth: login/register/session
+- shared_preferences: local key-value storage
+- flutter_form_builder: form และ validation UI
+- flutter_slidable: gesture/action ของสมาชิกใน Squad
+- intl: จัดรูปแบบข้อมูลวันที่/เวลา หากมีการใช้งานเพิ่มเติม
+- cupertino_icons: icon สำหรับ Cupertino หากมีการใช้
+- flutter_secure_storage: dependency ที่ควรตรวจสอบการใช้งานจริงอีกครั้ง
+
+Font:
+
+- family: Customfont
+- file: assets/fonts/newfont.ttf
+
+
+17. Flow การทำงานหลัก
+----------------------
+
+17.1 เปิดแอป
+
+main()
+	-> initialize Firebase
+	-> สร้าง Provider
+	-> StartupPage
+	-> authStateChanges()
+	-> MainNavigationPage หรือ LoginPage
+
+17.2 สมัครสมาชิก
+
+RegisterPage
+	-> validate form
+	-> AuthService.signUp()
+	-> Firebase createUserWithEmailAndPassword
+	-> updateDisplayName
+	-> set users/{uid}
+	-> เปิด MainNavigationPage
+
+17.3 Login
+
+LoginPage
+	-> validate form
+	-> AuthService.signIn()
+	-> Firebase auth state เปลี่ยน
+	-> AuthProvider โหลด username
+	-> MainNavigationPage
+
+17.4 สร้าง Party
+
+MainNavigationPage กด FAB
+	-> ตรวจ hasHostedParty()
+	-> ตรวจ isMemberOfAnyParty()
+	-> CreatePartyDialog
+	-> PartyProvider.createParty()
+	-> batch เขียน parties/{id} และ members/{uid}
+	-> กลับไป Squad detail
+
+17.5 Join Party
+
+Home PartyCard
+	-> SquadDetailPage
+	-> กด Join
+	-> PartyProvider.joinParty()
+	-> transaction ตรวจจำนวน/สมาชิกซ้ำ
+	-> เพิ่ม member และ update memberCount/status
+
+17.6 Community
+
+กด tab Community
+	-> อ่าน myCurrentParty
+	-> ถ้ามี Party สร้าง CommunityPage(partyId)
+	-> query posts ที่ partyId ตรงกัน
+	-> เพิ่ม post/comment พร้อม authorId และ authorName
+
+17.7 Logout
+
+SettingsPage
+	-> AuthService.signOut()
+	-> authStateChanges เป็น null
+	-> กลับ LoginPage
+
+
+18. ข้อควรระวังและสิ่งที่ควรพัฒนาต่อ
+--------------------------------------
+
+1. Firestore Security Rules
+	 ยังไม่พบ firestore.rules ใน workspace การกันสิทธิ์ Community/Party ใน UI
+	 ไม่เพียงพอสำหรับความปลอดภัยจริง ควรตั้ง rules ให้ตรวจ request.auth.uid
+	 และ membership ของ Party ฝั่ง Firebase
+
+2. Race condition ของการสร้าง/เข้าร่วม Party
+	 การตรวจ hasHostedParty และ isMemberOfAnyParty ก่อนสร้างอยู่ใน client
+	 ถ้ามีหลายเครื่องทำพร้อมกันอาจเกิดการแข่งกันเขียน ควรใช้ rules หรือ backend authority
+
+3. สมาชิกหน้า Members
+	 members_page.dart ปัจจุบันใช้ข้อมูลตัวอย่างแบบ hard-coded ไม่ได้อ่าน membersOf()
+	 ถ้าต้องการใช้งานจริงควรผูกกับ PartyProvider และ Party ปัจจุบัน
+
+4. Draft ใช้ key เดียว
+	 community_draft เป็น draft กลาง ถ้าเปลี่ยน Party อาจเห็น draft จาก Party เดิม
+	 ควรเปลี่ยน key เป็น community_draft_{partyId} หากต้องการแยกตาม Party
+
+5. Legacy posts
+	 โพสต์เก่าที่ไม่มี partyId จะไม่ปรากฏใน postsForParty()
+	 ต้อง migrate ข้อมูลเก่าหรือยอมรับว่าเป็นโพสต์จาก schema รุ่นก่อน
+
+6. Error handling ของ async actions
+	 การเพิ่มคอมเมนท์, save draft, join/leave/delete ควรมี loading state และแสดง error
+	 ให้สม่ำเสมอ รวมถึงป้องกันการกดปุ่มซ้ำ
+
+7. Profile query
+	 ProfilePage อ่าน Firestore ใน build() หาก rebuild บ่อยอาจอ่านซ้ำ
+	 ควรย้าย future ไป initState หรือรวม profile ไว้ใน AuthProvider
+
+8. Tests
+	 ปัจจุบันไม่มีโฟลเดอร์ test และ flutter test จึงยังรันไม่ได้
+	 ควรเพิ่ม unit test สำหรับ validators/providers และ widget test สำหรับ navigation/dialog
+
+9. ชื่อ package
+	 pubspec.yaml ยังใช้ name: flutter_application_1 ซึ่งเป็นชื่อจาก template
+	 ควรเปลี่ยนเป็นชื่อ package ที่สื่อถึง Squadify หากมีแผน publish/deploy จริง
+
+
+19. คำสั่งตรวจสอบโปรเจกต์
+--------------------------
+
+วิเคราะห์โค้ดทั้งโปรเจกต์:
+
+	flutter analyze
+
+รัน test เมื่อมี test directory:
+
+	flutter test
+
+จัด format Dart:
+
+	dart format lib
+
+ดู package ที่อัปเดตได้:
+
+	flutter pub outdated
+
+รันแอป:
+
+	flutter run
+
+
+20. สรุปสั้น
+------------
+
+Squadify แบ่งหน้าที่เป็นชั้นค่อนข้างชัดเจน:
+
+- pages รับผิดชอบ UI และ user interaction
+- providers รับผิดชอบ state และการคุยกับ database
+- services ห่อ Firebase/local storage
+- models แปลง Firestore data เป็น object ที่ใช้ใน Dart
+- widgets รวม UI ที่ใช้ซ้ำ
+- data/theme/validation เก็บค่ากลางของระบบ
+
+ฐานข้อมูลหลักคือ Cloud Firestore ส่วน Firebase Auth จัดการตัวตนผู้ใช้ และ
+SharedPreferences ใช้เก็บ draft ในเครื่องเท่านั้น การทำงานแบบ realtime หลักมาจาก
+Firestore snapshots() และ StreamBuilder/AsyncStreamSection ในหน้า UI

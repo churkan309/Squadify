@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -7,14 +9,16 @@ import '../services/auth_service.dart';
 // (ใช้ context.watch<AuthProvider>() ในหน้าที่ต้องโชว์ชื่อผู้ใช้แบบ realtime)
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
+  StreamSubscription<User?>? _authSubscription;
   User? _user;
   String? _username;
+  bool _disposed = false;
 
   AuthProvider({AuthService? authService})
     : _authService = authService ?? AuthService() {
     _user = _authService.currentUser;
     _username = _user?.displayName;
-    _authService.authStateChanges().listen(_onUserChanged);
+    _authSubscription = _authService.authStateChanges().listen(_onUserChanged);
     if (_user != null) {
       _loadUsername(_user!);
     }
@@ -45,6 +49,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _onUserChanged(User? user) async {
     _user = user;
     _username = user?.displayName;
+    if (_disposed) return;
     notifyListeners();
     if (user == null) {
       _username = null;
@@ -58,16 +63,24 @@ class AuthProvider extends ChangeNotifier {
       final profile = await _authService.getUserProfile(user.uid);
       final profileUsername = profile?['username'] as String?;
       final username = profileUsername?.trim();
-      if (_user?.uid != user.uid) return;
+      if (_disposed || _user?.uid != user.uid) return;
       if (username != null && username.isNotEmpty) {
         _username = username;
       } else {
         _username = user.displayName;
       }
     } catch (_) {
-      if (_user?.uid != user.uid) return;
+      if (_disposed || _user?.uid != user.uid) return;
       _username = user.displayName;
     }
+    if (_disposed) return;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }
