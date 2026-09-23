@@ -33,7 +33,11 @@ void showCommentSheet(
           children: [
             const Text(
               'ความคิดเห็น',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<PostComment>>(
@@ -41,7 +45,10 @@ void showCommentSheet(
               builder: (context, snapshot) {
                 final comments = snapshot.data ?? [];
                 if (comments.isEmpty) {
-                  return const Text('ยังไม่มีความคิดเห็น', style: TextStyle(color: Colors.white38));
+                  return const Text(
+                    'ยังไม่มีความคิดเห็น',
+                    style: TextStyle(color: Colors.white38),
+                  );
                 }
                 return ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 240),
@@ -50,9 +57,15 @@ void showCommentSheet(
                     itemCount: comments.length,
                     itemBuilder: (context, index) {
                       final c = comments[index];
+                      final authorName = c.authorName.trim().isEmpty
+                          ? 'ผู้เล่น'
+                          : c.authorName;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text('${c.authorName}: ${c.content}', style: const TextStyle(color: Colors.white70)),
+                        child: Text(
+                          '$authorName: ${c.content}',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
                       );
                     },
                   ),
@@ -69,7 +82,9 @@ void showCommentSheet(
                     decoration: const InputDecoration(
                       hintText: 'แสดงความคิดเห็น...',
                       hintStyle: TextStyle(color: Colors.white38),
-                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white30),
+                      ),
                     ),
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/party_model.dart';
 import '../providers/party_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_dialog.dart';
@@ -24,8 +25,6 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
   String? _selectedPartyId;
-  final GlobalKey _bellKey =
-      GlobalKey(); // ใช้หาตำแหน่งกระดิ่งบนจอ เพื่อเด้ง popup ออกจากจุดนั้น
 
   // แตะการ์ด squad (ของตัวเองหรือของคนอื่น) แล้วพาไปแท็บ detail พร้อม partyId
   void _onViewSquad(String partyId) {
@@ -45,44 +44,26 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           onViewSquad: _onViewSquad,
         );
       case 2:
-        return const CommunityPage();
+        return StreamBuilder<Party?>(
+          stream: context.read<PartyProvider>().myCurrentParty,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final party = snapshot.data;
+            if (party == null) {
+              return const Center(
+                child: Text('ต้องอยู่ใน Party ก่อนจึงจะเข้าชุมชนได้'),
+              );
+            }
+            return CommunityPage(partyId: party.id);
+          },
+        );
       case 3:
         return const SettingsPage();
       default:
         return HomeTabPage(onViewSquad: _onViewSquad);
     }
-  }
-
-  // เด้ง dialog แจ้งเตือนออกมาจากตำแหน่งกระดิ่ง (ใช้ showMenu) แทนที่จะขึ้นกลางจอ
-  void _showNotificationDropdown() {
-    final renderBox = _bellKey.currentContext!.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
-    showMenu(
-      context: context,
-      color: AppColors.notificationPopup,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      position: RelativeRect.fromLTRB(
-        offset.dx - 180, // เลื่อนซ้ายหน่อยกันล้นขอบจอขวา
-        offset.dy + size.height,
-        offset.dx + size.width,
-        0,
-      ),
-      items: const [
-        PopupMenuItem(
-          enabled: false,
-          child: Text(
-            'ยังไม่มีการแจ้งเตือนใหม่',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ),
-      ],
-    );
-    // ทำกระดิ่งแจ้งเตือนจริง: สร้าง Firestore collection 'notifications'
-    // (แนะนำ: subcollection users/{uid}/notifications) แล้วฟังด้วย
-    // StreamBuilder ตรงนี้แทน PopupMenuItem คงที่ด้านบน — trigger เพิ่ม doc ใหม่
-    // ตอน join/leave/remove เกิดขึ้นกับ squad ของ uid นั้นๆ
   }
 
   // กดปุ่ม + : เช็ก hasHostedParty จาก Firestore (ไม่ใช่ provider ใน memory)
@@ -130,17 +111,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           ),
         ),
         backgroundColor: AppColors.appBar,
-        actions: [
-          IconButton(
-            key: _bellKey,
-            onPressed: _showNotificationDropdown,
-            icon: const Icon(
-              Icons.notifications,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ],
       ),
       body: _getSelectedPage(),
       floatingActionButton: FloatingActionButton(

@@ -14,9 +14,6 @@ class AppColors {
   // การ์ด / กล่อง dialog / bottom sheet
   static const surface = Color(0xFF1A1A1A);
 
-  // popup แจ้งเตือนใต้กระดิ่ง
-  static const notificationPopup = Color(0xFF1B3A2E);
-
   // สีปุ่มหลัก (Create, Login, Register)
   static final primaryButton = Colors.lightBlue[100];
 

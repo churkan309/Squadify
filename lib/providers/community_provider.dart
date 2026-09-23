@@ -6,6 +6,7 @@ import '../services/firestore_service.dart';
 // โพสต์หนึ่งกระทู้ในกระดานสนทนา เก็บใน Firestore collection `posts`
 class DiscussionPost {
   final String id;
+  final String partyId;
   final String authorId;
   final String authorName;
   final String content;
@@ -14,6 +15,7 @@ class DiscussionPost {
 
   DiscussionPost({
     required this.id,
+    required this.partyId,
     required this.authorId,
     required this.authorName,
     required this.content,
@@ -21,10 +23,13 @@ class DiscussionPost {
     this.createdAt,
   });
 
-  factory DiscussionPost.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory DiscussionPost.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data() ?? <String, dynamic>{};
     return DiscussionPost(
       id: doc.id,
+      partyId: data['partyId'] as String? ?? '',
       authorId: data['authorId'] as String? ?? '',
       authorName: data['authorName'] as String? ?? '',
       content: data['content'] as String? ?? '',
@@ -34,12 +39,13 @@ class DiscussionPost {
   }
 
   Map<String, dynamic> toMap() => {
-        'authorId': authorId,
-        'authorName': authorName,
-        'content': content,
-        'commentCount': commentCount,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+    'partyId': partyId,
+    'authorId': authorId,
+    'authorName': authorName,
+    'content': content,
+    'commentCount': commentCount,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
 }
 
 // คอมเมนต์หนึ่งอัน เก็บใน subcollection posts/{id}/comments
@@ -58,7 +64,9 @@ class PostComment {
     this.createdAt,
   });
 
-  factory PostComment.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory PostComment.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data() ?? <String, dynamic>{};
     return PostComment(
       id: doc.id,
@@ -77,25 +85,34 @@ class CommunityProvider {
   final FirebaseAuth _auth;
   final FirestoreService _cache;
 
-  CommunityProvider({FirebaseFirestore? firestore, FirebaseAuth? auth, FirestoreService? cache})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance,
-        _cache = cache ?? FirestoreService();
+  CommunityProvider({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    FirestoreService? cache,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _cache = cache ?? FirestoreService();
 
-  CollectionReference<Map<String, dynamic>> get _posts => _firestore.collection('posts');
+  CollectionReference<Map<String, dynamic>> get _posts =>
+      _firestore.collection('posts');
 
   String? get _uid => _auth.currentUser?.uid;
 
-  Stream<List<DiscussionPost>> get allPosts {
-    return _posts.orderBy('createdAt', descending: true).snapshots().map((snap) {
-      final posts = snap.docs.map((d) => DiscussionPost.fromFirestore(d)).toList();
-      // เก็บ cache ไว้เผื่อเปิดแอพตอนไม่มีเน็ต (ดู readCachedPosts)
-      _cache.cachePosts(snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  Stream<List<DiscussionPost>> postsForParty(String partyId) {
+    return _posts.where('partyId', isEqualTo: partyId).snapshots().map((snap) {
+      final posts = snap.docs
+          .map((d) => DiscussionPost.fromFirestore(d))
+          .toList();
+      posts.sort((a, b) {
+        final aCreatedAt =
+            a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bCreatedAt =
+            b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bCreatedAt.compareTo(aCreatedAt);
+      });
       return posts;
     });
   }
-
-  Future<List<Map<String, dynamic>>> readCachedPosts() => _cache.readCachedPosts();
 
   Stream<List<PostComment>> commentsOf(String postId) {
     return _posts
@@ -103,24 +120,37 @@ class CommunityProvider {
         .collection('comments')
         .orderBy('createdAt')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => PostComment.fromFirestore(d)).toList());
+        .map(
+          (snap) => snap.docs.map((d) => PostComment.fromFirestore(d)).toList(),
+        );
   }
 
-  Future<void> addPost(String content, String authorName) async {
+  Future<void> addPost(
+    String partyId,
+    String content,
+    String authorName,
+  ) async {
     final uid = _uid;
-    if (uid == null || content.trim().isEmpty) return;
-    await _posts.add(DiscussionPost(
-      id: '',
-      authorId: uid,
-      authorName: authorName,
-      content: content.trim(),
-      commentCount: 0,
-    ).toMap());
+    if (uid == null || partyId.isEmpty || content.trim().isEmpty) return;
+    await _posts.add(
+      DiscussionPost(
+        id: '',
+        partyId: partyId,
+        authorId: uid,
+        authorName: authorName,
+        content: content.trim(),
+        commentCount: 0,
+      ).toMap(),
+    );
     await _cache.clearDraft();
   }
 
   // อัปเดต commentCount ด้วยทรานแซกชัน กันแข่งกันเขียนพร้อมกันแล้วนับเพี้ยน
-  Future<void> addComment(String postId, String content, String authorName) async {
+  Future<void> addComment(
+    String postId,
+    String content,
+    String authorName,
+  ) async {
     final uid = _uid;
     if (uid == null || content.trim().isEmpty) return;
     final postRef = _posts.doc(postId);

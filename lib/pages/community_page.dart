@@ -11,7 +11,9 @@ import '../widgets/discussion_post_card.dart';
 // ทุกคนเห็นโพสต์เดียวกันจาก Firestore เสมอ, shared_preferences ใช้แค่
 // (1) cache โพสต์ล่าสุดไว้ดู offline (2) เก็บ draft ข้อความที่พิมพ์ค้างไว้
 class CommunityPage extends StatefulWidget {
-  const CommunityPage({super.key});
+  final String partyId;
+
+  const CommunityPage({super.key, required this.partyId});
 
   @override
   State<CommunityPage> createState() => _CommunityPageState();
@@ -36,17 +38,24 @@ class _CommunityPageState extends State<CommunityPage> {
   Future<void> _addPost() async {
     final text = _postController.text.trim();
     if (text.isEmpty) return;
-    final authorName = context.read<AuthProvider>().username ?? 'ผู้เล่น';
-    await context.read<CommunityProvider>().addPost(text, authorName);
+    final authorName = await context.read<AuthProvider>().currentUsername();
+    if (!mounted) return;
+    await context.read<CommunityProvider>().addPost(
+      widget.partyId,
+      text,
+      authorName,
+    );
     _postController.clear();
   }
 
-  void _openComments(String postId) {
+  Future<void> _openComments(String postId) async {
+    final authorName = await context.read<AuthProvider>().currentUsername();
+    if (!mounted) return;
     showCommentSheet(
       context,
       postId: postId,
       communityProvider: context.read<CommunityProvider>(),
-      authorName: context.read<AuthProvider>().username ?? 'ผู้เล่น',
+      authorName: authorName,
     );
   }
 
@@ -72,7 +81,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   style: const TextStyle(color: Colors.white),
                   onChanged: (text) => communityProvider.saveDraft(text),
                   decoration: const InputDecoration(
-                    hintText: 'พูดคุยอะไรกับชุมชนดี...',
+                    hintText: 'พูดคุยอะไรกับปาร์ตี้ดี...',
                     hintStyle: TextStyle(color: Colors.white38),
                     enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.white30),
@@ -89,7 +98,7 @@ class _CommunityPageState extends State<CommunityPage> {
         ),
         Expanded(
           child: AsyncStreamSection<List<DiscussionPost>>(
-            stream: communityProvider.allPosts,
+            stream: communityProvider.postsForParty(widget.partyId),
             isEmpty: (posts) => posts.isEmpty,
             emptyMessage: 'ยังไม่มีกระทู้ ลองเป็นคนแรกที่พูดคุยดูสิ',
             errorMessage: 'โหลดกระทู้ไม่สำเร็จ',

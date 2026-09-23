@@ -27,14 +27,6 @@ class SquadMember {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'avatarUrl': avatarUrl,
-      'isLeader': isLeader,
-      'joinedAt': FieldValue.serverTimestamp(),
-    };
-  }
 }
 
 // ข้อมูล Squad/Party หนึ่งกลุ่ม เก็บใน Firestore collection `parties`
@@ -80,17 +72,4 @@ class Party {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'game': game,
-      'iconPath': iconPath,
-      'maxMembers': maxMembers,
-      'description': description,
-      'hostId': hostId,
-      'hostName': hostName,
-      'memberCount': memberCount,
-      'status': status,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-  }
 }

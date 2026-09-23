@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ไอคอนเกมวงกลม โหลดจาก assets ตาม iconPath ของ Party
-// ถ้าไฟล์ไม่มี (ยังไม่ได้วางไอคอนจริงตาม TODO ข้อ 5) fallback เป็น Icons.videogame_asset
-// ใช้ร่วมกันใน party_card.dart (การ์ดย่อ) และ squad_detail_page.dart (หน้ารายละเอียด)
+// ถ้าไฟล์ไอคอนไม่มี fallback เป็น Icons.videogame_asset
 class GameIconAvatar extends StatelessWidget {
   final String iconPath;
   final double size;

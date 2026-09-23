@@ -23,7 +23,13 @@ class AuthPageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('Squadify')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text(
+          'Squadify',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 30),
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 300.0),
@@ -121,7 +127,10 @@ class AuthSubmitButton extends StatelessWidget {
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : Text(label, style: const TextStyle(color: Color.fromARGB(255, 13, 13, 13))),
+          : Text(
+              label,
+              style: const TextStyle(color: Color.fromARGB(255, 13, 13, 13)),
+            ),
     );
   }
 }
@@ -131,7 +140,11 @@ class AuthFooterLink extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const AuthFooterLink({super.key, required this.label, required this.onPressed});
+  const AuthFooterLink({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {

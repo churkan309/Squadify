@@ -68,7 +68,6 @@ void showCreatePartyDialog(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 👇 Dropdown เลือกเกม
                     DropdownButtonFormField<String>(
                       value: selectedGame,
                       dropdownColor: AppColors.surface,
@@ -107,7 +106,6 @@ void showCreatePartyDialog(
 
                     const SizedBox(height: 16),
 
-                    // 👇 ไอคอนใหญ่ขึ้น + จำนวนสมาชิก 1/x เฉพาะตอนเลือกเกมแล้ว
                     if (selectedGameInfo != null)
                       Row(
                         children: [
@@ -132,7 +130,6 @@ void showCreatePartyDialog(
 
                     const SizedBox(height: 16),
 
-                    // 👇 Description พิมพ์อิสระ
                     TextFormField(
                       controller: descriptionController,
                       style: const TextStyle(color: Colors.white),

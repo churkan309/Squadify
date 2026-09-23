@@ -12,14 +12,18 @@ class MembersPage extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'สมาชิก',
-          style: TextStyle(color: Color.fromARGB(255, 234, 234, 234)),
+          'Group\'s Members',
+          style: TextStyle(
+            color: Color.fromARGB(255, 234, 234, 234),
+            fontWeight: FontWeight.w900,
+            fontSize: 30,
+          ),
         ),
         backgroundColor: AppColors.appBar,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
+        children: [
           Align(
             alignment: Alignment.topCenter,
             child: ProfileInfoBar(
@@ -35,6 +39,8 @@ class MembersPage extends StatelessWidget {
               detail: '6721602326',
             ),
           ),
+          SizedBox(height: 10),
+          Image.asset('assets/images/whoIsJson.png'),
         ],
       ),
     );

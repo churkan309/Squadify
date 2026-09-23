@@ -9,10 +9,18 @@ class DiscussionPostCard extends StatelessWidget {
   final DiscussionPost post;
   final VoidCallback onCommentTap;
 
-  const DiscussionPostCard({super.key, required this.post, required this.onCommentTap});
+  const DiscussionPostCard({
+    super.key,
+    required this.post,
+    required this.onCommentTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final authorName = post.authorName.trim().isEmpty
+        ? 'ผู้เล่น'
+        : post.authorName;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -23,15 +31,27 @@ class DiscussionPostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(post.authorName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            'Post by $authorName',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(post.content, style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: onCommentTap,
-            icon: const Icon(Icons.mode_comment_outlined, color: Colors.white54, size: 18),
+            icon: const Icon(
+              Icons.mode_comment_outlined,
+              color: Colors.white54,
+              size: 18,
+            ),
             label: Text(
-              post.commentCount == 0 ? 'แสดงความคิดเห็น' : '${post.commentCount} ความคิดเห็น',
+              post.commentCount == 0
+                  ? 'แสดงความคิดเห็น'
+                  : '${post.commentCount} ความคิดเห็น',
               style: const TextStyle(color: Colors.white54),
             ),
           ),

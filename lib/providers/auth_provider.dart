@@ -10,21 +10,63 @@ class AuthProvider extends ChangeNotifier {
   User? _user;
   String? _username;
 
-  AuthProvider({AuthService? authService}) : _authService = authService ?? AuthService() {
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService() {
+    _user = _authService.currentUser;
+    _username = _user?.displayName;
     _authService.authStateChanges().listen(_onUserChanged);
+    if (_user != null) {
+      _loadUsername(_user!);
+    }
   }
 
   User? get user => _user;
   String? get username => _username;
   AuthService get service => _authService;
 
+  Future<String> currentUsername() async {
+    final currentUser = _user ?? _authService.currentUser;
+    if (currentUser == null) return 'ผู้เล่น';
+
+    try {
+      final profile = await _authService.getUserProfile(currentUser.uid);
+      final profileUsername = profile?['username'] as String?;
+      if (profileUsername != null && profileUsername.trim().isNotEmpty) {
+        return profileUsername.trim();
+      }
+    } catch (_) {
+      // Use Firebase Auth's display name when the profile cannot be read.
+    }
+
+    final displayName = currentUser.displayName?.trim();
+    return displayName == null || displayName.isEmpty ? 'ผู้เล่น' : displayName;
+  }
+
   Future<void> _onUserChanged(User? user) async {
     _user = user;
-    if (user != null) {
-      final profile = await _authService.getUserProfile(user.uid);
-      _username = profile?['username'] as String? ?? user.displayName;
-    } else {
+    _username = user?.displayName;
+    notifyListeners();
+    if (user == null) {
       _username = null;
+      return;
+    }
+    await _loadUsername(user);
+  }
+
+  Future<void> _loadUsername(User user) async {
+    try {
+      final profile = await _authService.getUserProfile(user.uid);
+      final profileUsername = profile?['username'] as String?;
+      final username = profileUsername?.trim();
+      if (_user?.uid != user.uid) return;
+      if (username != null && username.isNotEmpty) {
+        _username = username;
+      } else {
+        _username = user.displayName;
+      }
+    } catch (_) {
+      if (_user?.uid != user.uid) return;
+      _username = user.displayName;
     }
     notifyListeners();
   }

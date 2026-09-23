@@ -27,7 +27,7 @@ class SettingsPage extends StatelessWidget {
         ),
         SettingsTile(
           icon: Icons.groups_outlined,
-          title: 'สมาชิก',
+          title: 'Group\'s Members',
           onTap: () {
             Navigator.push(
               context,
