@@ -39,10 +39,17 @@ class SquadDetailPageResolver extends StatelessWidget {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: Text(
-                'คุณยังไม่ได้สร้าง Squad\nกดปุ่ม + ด้านล่างเพื่อสร้าง Squad ของคุณ',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.warning, size: 50, color: Colors.white70),
+                  SizedBox(height: 16),
+                  Text(
+                    'คุณยังไม่ได้สร้างหรือเข้าร่วม Squad',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
               ),
             ),
           );

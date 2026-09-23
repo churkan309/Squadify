@@ -44,12 +44,11 @@ class _HomeTabPageState extends State<HomeTabPage> {
             builder: (context, snapshot) =>
                 _ProfileHeader(username: snapshot.data ?? username),
           ),
-
           const _SectionTitle('Squad ของฉัน'),
           AsyncStreamSection<Party?>(
             stream: partyProvider.myCurrentParty,
             emptyMessage:
-                'ยังไม่มี Squad กดปุ่ม + ด้านล่างเพื่อสร้าง Squad แรกของคุณ',
+                'คุณยังไม่มี Squad\nกดปุ่ม + ด้านล่างเพื่อสร้าง Squad แรกของคุณ',
             errorMessage: 'โหลด Squad ไม่สำเร็จ',
             builder: (context, party) =>
                 PartyGrid(parties: [party!], onViewSquad: widget.onViewSquad),
@@ -139,15 +138,21 @@ class _ProfileHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              username.isEmpty ? 'Hello' : 'Hello, $username',
-              style: const TextStyle(fontSize: 30, color: Colors.white),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.waving_hand, color: Colors.white70, size: 30),
+                const SizedBox(width: 8),
+                Text(
+                  username.isEmpty ? 'Hello' : 'Hello, $username',
+                  style: const TextStyle(fontSize: 30, color: Colors.white),
+                ),
+              ],
             ),
             const Text(
               'Which squad you want to LOCK IN ?',
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
-            const SizedBox(height: 30),
           ],
         ),
       ),

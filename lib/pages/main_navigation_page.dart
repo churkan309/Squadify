@@ -53,7 +53,17 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             final party = snapshot.data;
             if (party == null) {
               return const Center(
-                child: Text('ต้องอยู่ใน Party ก่อนจึงจะเข้าชุมชนได้'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.warning, size: 50, color: Colors.white70),
+                    SizedBox(height: 16),
+                    Text(
+                      'ต้องอยู่ใน Party ก่อนจึงจะเข้าชุมชนได้',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ],
+                ),
               );
             }
             return CommunityPage(partyId: party.id);
