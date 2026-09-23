@@ -112,7 +112,6 @@ class PartyProvider {
     batch.set(partyRef.collection('members').doc(uid), {
       'uid': uid,
       'name': hostName,
-      'avatarUrl': '',
       'isLeader': true,
       'joinedAt': FieldValue.serverTimestamp(),
     });
@@ -145,7 +144,6 @@ class PartyProvider {
   Future<String?> joinParty(
     String partyId, {
     required String name,
-    String avatarUrl = '',
   }) async {
     final uid = _uid;
     if (uid == null) return 'กรุณาล็อกอินก่อน';
@@ -172,7 +170,6 @@ class PartyProvider {
       tx.set(memberRef, {
         'uid': uid,
         'name': name,
-        'avatarUrl': avatarUrl,
         'isLeader': false,
         'joinedAt': FieldValue.serverTimestamp(),
       });

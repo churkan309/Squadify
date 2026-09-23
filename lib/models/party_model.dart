@@ -4,14 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class SquadMember {
   final String uid;
   final String name;
-  final String avatarUrl;
   final bool isLeader; // หัวปาร์ตี้ (คนสร้าง Squad) เตะตัวเองออกไม่ได้
   final DateTime? joinedAt;
 
   SquadMember({
     required this.uid,
     required this.name,
-    this.avatarUrl = '',
     this.isLeader = false,
     this.joinedAt,
   });
@@ -21,7 +19,6 @@ class SquadMember {
     return SquadMember(
       uid: doc.id,
       name: data['name'] as String? ?? '',
-      avatarUrl: data['avatarUrl'] as String? ?? '',
       isLeader: data['isLeader'] as bool? ?? false,
       joinedAt: (data['joinedAt'] as Timestamp?)?.toDate(),
     );

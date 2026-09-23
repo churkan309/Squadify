@@ -44,7 +44,6 @@ class AuthService {
         'uid': uid,
         'username': username.trim(),
         'email': email.trim(),
-        'avatarUrl': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseAuthException catch (e) {

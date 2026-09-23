@@ -48,20 +48,19 @@ class SquadMemberTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: Colors.white12,
-              backgroundImage: member.avatarUrl.isNotEmpty ? NetworkImage(member.avatarUrl) : null,
-              child: member.avatarUrl.isEmpty
-                  ? Text(
-                      member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.white),
-                    )
-                  : null,
-            ),
+            const Icon(Icons.account_circle, color: Colors.white70, size: 48),
             const SizedBox(width: 12),
-            Expanded(child: Text(member.name, style: const TextStyle(color: Colors.white))),
+            Expanded(
+              child: Text(
+                member.name,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
             if (member.isLeader)
-              const Text('หัวปาร์ตี้', style: TextStyle(color: Colors.amber, fontSize: 12)),
+              const Text(
+                'หัวปาร์ตี้',
+                style: TextStyle(color: Colors.amber, fontSize: 12),
+              ),
           ],
         ),
       ),
