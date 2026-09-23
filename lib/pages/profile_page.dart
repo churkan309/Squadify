@@ -17,19 +17,31 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text(
+          'Profile',
+          style: TextStyle(color: Color.fromARGB(255, 234, 234, 234)),
+        ),
         backgroundColor: AppColors.appBar,
       ),
       body: user == null
-          ? const Center(child: Text('ไม่พบผู้ใช้', style: TextStyle(color: Colors.white70)))
+          ? const Center(
+              child: Text(
+                'ไม่พบผู้ใช้',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
           : FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final data = snapshot.data?.data();
-                final username = data?['username'] as String? ?? user.displayName ?? '-';
+                final username =
+                    data?['username'] as String? ?? user.displayName ?? '-';
                 final email = data?['email'] as String? ?? user.email ?? '-';
 
                 return SingleChildScrollView(

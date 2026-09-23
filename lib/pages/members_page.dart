@@ -11,7 +11,10 @@ class MembersPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('สมาชิก'),
+        title: const Text(
+          'สมาชิก',
+          style: TextStyle(color: Color.fromARGB(255, 234, 234, 234)),
+        ),
         backgroundColor: AppColors.appBar,
       ),
       body: ListView(
@@ -28,7 +31,7 @@ class MembersPage extends StatelessWidget {
           Align(
             alignment: Alignment.topCenter,
             child: ProfileInfoBar(
-              name: 'เฌอกานต์',
+              name: 'เฌอกานต์ คล้ายเครือ',
               detail: '6721602326',
             ),
           ),

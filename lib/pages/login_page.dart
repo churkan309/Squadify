@@ -24,14 +24,19 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.signIn(_emailController.text, _passwordController.text);
+      await _authService.signIn(
+        _emailController.text,
+        _passwordController.text,
+      );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const MainNavigationPage()),
       );
     } on AuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -74,14 +79,14 @@ class _LoginPageState extends State<LoginPage> {
       submitButton: AuthSubmitButton(
         isLoading: _isLoading,
         onPressed: _onSubmit,
-        label: 'Login',
+        label: 'เข้าสู่ระบบ',
       ),
       footer: AuthFooterLink(
         label: 'ยังไม่มีบัญชี? สมัครสมาชิก',
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const RegisterPage()),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => const RegisterPage()));
         },
       ),
     );
